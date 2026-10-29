@@ -99,7 +99,11 @@ nav{width:320px;flex:none;display:flex;flex-direction:column;gap:20px}
 .badge b{font-size:54px;font-weight:900}
 .badge span{font-size:25px;font-weight:700;text-transform:uppercase;margin-top:6px;letter-spacing:.04em}
 .badge.alt{background:var(--soft);color:var(--ink)}
-.when{flex:none;align-self:center;text-align:center;min-width:150px;height:54px;padding:0 16px;border-radius:27px;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:700;background:var(--soft);color:var(--muted);white-space:nowrap}
+.when{display:inline-flex;align-items:center;height:40px;padding:0 16px;border-radius:20px;margin-bottom:10px;font-size:23px;font-weight:700;background:var(--soft);color:var(--muted);white-space:nowrap}
+.row.compact{gap:22px}
+.row.compact h3{font-size:32px}
+.row.compact .badge{width:104px;height:104px}
+.row.compact .badge b{font-size:48px}
 .when.hot{background:#ffe9d8;color:#c4400a}
 .when.today{background:var(--grad);color:#fff}
 
@@ -152,6 +156,7 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
 .addbtn{width:100%;height:104px;border-radius:30px;background:var(--grad);color:#fff;font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:18px;box-shadow:0 10px 22px rgba(226,35,26,.3);transition:transform .12s}
 .addbtn:active{transform:scale(.98)}
 .addbtn svg{width:44px;height:44px}
+.tag.warn{background:#fff1e6;border-color:transparent;color:#c4400a;font-weight:700}
 .pc.ghost{opacity:.35}
 .pc.ghost .av{background:#c9c3bf}
 .empty{padding:70px 20px;text-align:center;font-size:34px;font-weight:500;color:var(--muted)}
@@ -223,56 +228,36 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
   </div>
 </div>
 
+<script src="schedule.js"></script>
 <script>
 /* ===== Daten (Beispieldaten, hier später durch echte Quellen/API ersetzen) =====
    Die Texte stehen auf Deutsch. Die englischen Übersetzungen stehen weiter unten im Wörterbuch DICT. */
 const WD  = ['Mo','Di','Mi','Do','Fr'];
 const WDE = ['Mon','Tue','Wed','Thu','Fri'];
-/* Stundenplan: nur Montag, Dienstag und Donnerstag. Semester 3 ist von Hand eingetragen, die anderen Semester werden aus MODULES erzeugt (Beispiele). */
-const DAYS = [0,1,3];   /* Index in WD: Mo, Di, Do */
-const PLAN3 = [
-  [ {s:'08:15',e:'09:45',t:'Mathematik 3',k:'Vorlesung',w:'Prof. Dr. Probe',r:'I 1.01'},
-    {s:'10:00',e:'11:30',t:'Datenbanksysteme',k:'Vorlesung',w:'Prof. Dr. Demo',r:'I 2.14'},
-    {s:'12:30',e:'14:00',t:'Datenbanksysteme',k:'Praktikum',w:'Prof. Dr. Demo',r:'Labor I 0.07'},
-    {s:'14:15',e:'15:45',t:'Englisch für Informatiker',k:'Übung',w:'Frau Beispiel',r:'I 1.12'} ],
-  [ {s:'08:15',e:'09:45',t:'Algorithmen & Datenstrukturen',k:'Vorlesung',w:'Prof. Dr. Mustermann',r:'I 1.01'},
-    {s:'10:00',e:'11:30',t:'Betriebssysteme',k:'Vorlesung',w:'Prof. Dr. Platzhalter',r:'I 1.05'},
-    {s:'12:30',e:'14:00',t:'Algorithmen & Datenstrukturen',k:'Übung',w:'Prof. Dr. Mustermann',r:'I 2.03'},
-    {s:'14:15',e:'15:45',t:'Web-Technologien',k:'Praktikum',w:'Prof. Dr. Platzhalter',r:'Labor I 0.04'},
-    {s:'16:00',e:'17:30',t:'Mathematik 3',k:'Übung',w:'Prof. Dr. Probe',r:'I 1.03'} ],
-  [ {s:'08:15',e:'09:45',t:'Human-Computer Interaction',k:'Vorlesung',w:'Prof. Dr. Demo',r:'I 1.01'},
-    {s:'10:00',e:'11:30',t:'Human-Computer Interaction',k:'Projekt',w:'Prof. Dr. Demo',r:'Labor I 0.05'},
-    {s:'12:30',e:'14:00',t:'Datenbanksysteme',k:'Übung',w:'Prof. Dr. Demo',r:'I 2.14'},
-    {s:'14:15',e:'15:45',t:'Web-Technologien',k:'Vorlesung',w:'Prof. Dr. Platzhalter',r:'I 1.05'},
-    {s:'16:00',e:'17:30',t:'Software Engineering',k:'Projekt',w:'Prof. Dr. Mustermann',r:'Labor I 0.05'} ]
-];
-const MODULES = {
-  1:['Mathematik 1','Programmieren 1','Grundlagen der Informatik','Technische Grundlagen','Wissenschaftliches Arbeiten'],
-  2:['Mathematik 2','Programmieren 2','Rechnerarchitektur','Datenstrukturen','Englisch 1'],
-  4:['Computergrafik','Rechnernetze','Theoretische Informatik','Statistik','Projektmanagement'],
-  5:['Mobile Anwendungen','IT-Sicherheit','Künstliche Intelligenz','Verteilte Systeme','Wahlpflichtmodul'],
-  6:['Praxisphase','Wahlpflichtmodul 2','Datenschutz & Recht','Projektarbeit'],
-  7:['Bachelorseminar','Wahlpflichtmodul 3','Bachelorarbeit']
-};
-const SLOT = [['08:15','09:45'],['10:00','11:30'],['12:30','14:00'],['14:15','15:45'],['16:00','17:30']];
-const WHO  = ['Prof. Dr. Mustermann','Prof. Dr. Demo','Prof. Dr. Platzhalter','Prof. Dr. Probe','Frau Beispiel'];
-const TPL  = [
-  [[0,0,'Vorlesung'],[1,1,'Vorlesung'],[2,1,'Praktikum'],[3,2,'Übung']],
-  [[0,2,'Vorlesung'],[1,3,'Vorlesung'],[2,0,'Übung'],[3,3,'Praktikum'],[4,4,'Vorlesung']],
-  [[0,4,'Vorlesung'],[1,0,'Projekt'],[2,2,'Übung'],[3,1,'Vorlesung']]
-];
-const LIM = {6:3, 7:2};   /* höhere Semester haben weniger Termine */
-const planCache = {};
-function planFor(sem){
-  if(sem===3) return PLAN3;
-  if(planCache[sem]) return planCache[sem];
-  const M=MODULES[sem];
-  return planCache[sem]=TPL.map(day=>day.slice(0,LIM[sem]||day.length).map(([si,mi,k])=>{
-    const m=mi%M.length, lab=(k==='Praktikum'||k==='Projekt');
-    return {s:SLOT[si][0],e:SLOT[si][1],t:M[m],k,w:WHO[(m+sem)%WHO.length],
-            r:lab?('Labor I 0.0'+(1+(sem+m)%7)):('I '+(1+m%2)+'.'+String(1+(sem*2+m*3)%14).padStart(2,'0'))};
-  }));
+/* ===== Stundenplan und Termine: echte Daten =====
+   schedule.js wird aus der Excel-Zeitplanung erzeugt (tools/excel_to_json.py) und definiert window.SCHEDULE.
+   Läuft die Seite über http(s), wird zusätzlich schedule.json regelmäßig neu geladen. */
+const PROGRAM = ['Wirtschaftsinformatik','Business Informatics'];   /* bitte prüfen */
+const DEFAULT_SEM = 1;
+let SCH = window.SCHEDULE || null;
+if(!SCH){ try{ SCH = JSON.parse(localStorage.getItem('sched-v1')||'null'); }catch(e){} }
+const semList = () => (SCH && SCH.meta && SCH.meta.semesters) || [1,3,5,7];
+function studyDays(sem){   /* die nächsten 5 Tage ab heute, an denen dieses Semester Termine hat */
+  if(!SCH) return [];
+  const today = ymd(new Date());
+  return [...new Set(SCH.lessons.filter(l=>l.sems.includes(sem)&&l.date>=today).map(l=>l.date))].sort().slice(0,5);
 }
+async function loadSchedule(){
+  if(!/^https?:/.test(location.protocol)) return;
+  try{
+    const r = await fetch('schedule.json?'+Date.now(), {cache:'no-store'});
+    if(!r.ok) return;
+    SCH = await r.json();
+    try{ localStorage.setItem('sched-v1', JSON.stringify(SCH)); }catch(e){}
+    if(S.tab==='plan'||S.tab==='termine'){ sync(); drawPanel(false); }
+  }catch(e){}
+}
+
 const EVENTS = [
   {d:'2026-11-04',t:'Infoabend Auslandssemester',time:'18:00',o:'Hörsaal 1',g:'Studium'},
   {d:'2026-11-07',t:'Campus-Lauf',time:'11:00',o:'Sportplatz',g:'Sport'},
@@ -281,14 +266,6 @@ const EVENTS = [
   {d:'2026-11-26',t:'Vortrag: Gamification im Alltag',time:'17:00',o:'Hörsaal 2',g:'Vortrag'},
   {d:'2026-12-03',t:'Winterfest auf dem Campus',time:'16:00',o:'Campusplatz',g:'Kultur'},
   {d:'2026-12-10',t:'Filmabend im Hörsaal',time:'19:00',o:'Hörsaal 1',g:'Kultur'}
-];
-const TERMINE = [
-  {d:'2026-11-20',t:'Anmeldefrist Prüfungen',n:'Wintersemester 2026/27'},
-  {d:'2026-12-01',t:'Bewerbungsfrist Auslandssemester',n:'Akademisches Auslandsamt'},
-  {d:'2026-12-24',e:'2027-01-06',t:'Weihnachtsferien',n:'Keine Lehrveranstaltungen'},
-  {d:'2027-01-29',t:'Letzter Vorlesungstag',n:'Wintersemester 2026/27'},
-  {d:'2027-02-01',e:'2027-02-19',t:'Prüfungszeitraum',n:'Raumpläne im Studierendenportal'},
-  {d:'2027-02-15',t:'Rückmeldung Sommersemester',n:'Frist für den Semesterbeitrag'}
 ];
 const MENSA = [
   [ {c:'Hauptgericht',t:'Hähnchen-Geschnetzeltes mit Reis',g:['Geflügel'],p:'3,80'},
@@ -376,17 +353,30 @@ const DICT = {
   'Käsespätzle mit Röstzwiebeln':'Cheese spätzle with fried onions','Gemüsepfanne mit Tofu':'Vegetable stir-fry with tofu',
   'Schokomousse':'Chocolate mousse',
   'Geflügel':'poultry','Schwein':'pork','Rind':'beef','Fisch':'fish','vegetarisch':'vegetarian','vegan':'vegan',
-  /* Semester-Module */
-  'Mathematik 1':'Mathematics 1','Programmieren 1':'Programming 1','Grundlagen der Informatik':'Fundamentals of Computer Science',
-  'Technische Grundlagen':'Technical Fundamentals','Wissenschaftliches Arbeiten':'Academic Writing',
-  'Mathematik 2':'Mathematics 2','Programmieren 2':'Programming 2','Rechnerarchitektur':'Computer Architecture',
-  'Datenstrukturen':'Data Structures','Englisch 1':'English 1',
-  'Computergrafik':'Computer Graphics','Rechnernetze':'Computer Networks','Theoretische Informatik':'Theoretical Computer Science',
-  'Statistik':'Statistics','Projektmanagement':'Project Management',
-  'Mobile Anwendungen':'Mobile Applications','IT-Sicherheit':'IT Security','Künstliche Intelligenz':'Artificial Intelligence',
-  'Verteilte Systeme':'Distributed Systems','Wahlpflichtmodul':'Elective Module',
-  'Praxisphase':'Internship Phase','Wahlpflichtmodul 2':'Elective Module 2','Datenschutz & Recht':'Data Protection & Law',
-  'Projektarbeit':'Project Work','Bachelorseminar':'Bachelor Seminar','Wahlpflichtmodul 3':'Elective Module 3','Bachelorarbeit':'Bachelor Thesis',
+  /* Stundenplan (echte Module) */
+  'Projekt- und Trendmanagement':'Project and Trend Management','Mensch-Maschine-Interaktion':'Human-Computer Interaction',
+  'Motivations- und Teampsychologie':'Motivation and Team Psychology','Grundlagen der Programmierung':'Programming Fundamentals',
+  'Grundlagen des Innovationsmanagements':'Fundamentals of Innovation Management',
+  'Change Management und digitale Transformation':'Change Management and Digital Transformation',
+  'Wissenschaftliches Arbeiten I':'Academic Writing I','BWL & Omnichannel Commerce':'Business Administration & Omnichannel Commerce',
+  'Stakeholdermanagement in der Digitalisierung':'Stakeholder Management in Digitalization',
+  'WPF KI in Kapitalmärkten':'Elective: AI in Capital Markets',
+  'WPF Angewandte Persönlichkeitsentwicklung':'Elective: Applied Personality Development',
+  'WPF Startup Engineering II / Startup Engineering II (ADT. 7 Semester)':'Elective: Startup Engineering II (ADT, 7th semester)',
+  'Online':'Online','Raum folgt':'Room tbc','Ort folgt':'Place tbc','Vorläufig':'Provisional','Stand':'Updated',
+  'Kein Stundenplan geladen':'No timetable loaded','Keine weiteren Termine im Plan':'No further dates in the plan',
+  /* Termine und Hinweise */
+  'Prüfungseinsicht':'Exam Review','LCC CityRallye':'LCC City Rally','Anrechnungsprozess: Deadline Upload':'Credit Recognition: Upload Deadline',
+  'Prüfungsanmeldung':'Exam Registration',
+  '13:00 - 17:00 Uhr Erstsemestertag & @ALL ab 17:00 Uhr Amos Lounge Semesteropening':'First-Year Day 13:00–17:00 & @ALL from 17:00 Amos Lounge Semester Opening',
+  'Grundlagen der Programmierung Installation Python (Fabio) / Python Workshop Marcel (Zielgruppe: IoT)':'Programming Fundamentals: Python installation (Fabio) / Python workshop Marcel (target group: IoT)',
+  'Tutorium: Grundlagen der Programmierung (Fabio)':'Tutorial: Programming Fundamentals (Fabio)',
+  'Infotermin Praktisches Studiensemester (Grosch)':'Info Session: Practical Study Semester (Grosch)',
+  'Beginn Rückmeldezeitraum (bis 15. Februar)':'Re-registration Period Starts (until 15 February)',
+  'Bekanntgabe Wiederholungsprüfungen':'Announcement of Resit Exams','Wiederholungsklausuren':'Resit Exams',
+  'Abgabe Wiederholungsportfolios':'Resit Portfolio Submission','Kolloquien':'Colloquia',
+  'Ende Semesterferien':'End of Semester Break','Tag der dt. Einheit':'German Unity Day','Allerheiligen':"All Saints' Day",
+  'Heilige drei Könige':'Epiphany',
   /* Kaffee eintragen */
   'Kaffee eintragen':'Add coffee','Name auswählen':'Choose your name','oder neuen Namen eintippen':'or type a new name',
   'Name':'Name','Anzahl Tassen':'Number of cups','Abbrechen':'Cancel','Speichern':'Save','Leerzeichen':'Space',
@@ -432,37 +422,38 @@ function weekDates(){
   const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)+((dow===0||dow===6)?7:0));
   return [0,1,2,3,4].map(i=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return x});
 }
-function lecDates(){   /* Mo, Di, Do der laufenden Woche; ab Freitag die nächste Woche */
-  const n=midnight(new Date()), dow=n.getDay();
-  const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)+((dow===0||dow>=5)?7:0));
-  return DAYS.map(i=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return x});
-}
-function lecIdx(){const d=new Date().getDay();return d===1?0:d===2?1:(d===3||d===4)?2:0}
+const wdOf = iso => (LI?['Sun','Mon','Tue','Wed','Thu','Fri','Sat']:['So','Mo','Di','Mi','Do','Fr','Sa'])[parse(iso).getDay()];
 function todayIdx(){const d=new Date().getDay();return (d===0||d===6)?0:d-1}
 const initials=n=>n.replace(/^Prof\. Dr\. /,'').split(' ').map(w=>w[0]).slice(0,2).join('');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tagHtml=g=>`<span class="tag ${(g==='vegan'||g==='vegetarisch')?'v':''}">${esc(t(g))}</span>`;
 
 /* ===== Zustand ===== */
-const fresh=()=>({tab:'plan',day:lecIdx(),sem:3,mday:todayIdx(),fak:'Alle',per:0,lang:'de',modal:null});
+const fresh=()=>({tab:'plan',date:null,sem:DEFAULT_SEM,mday:todayIdx(),fak:'Alle',per:0,lang:'de',modal:null});
 let S=fresh();
 
 /* ===== Inhalte der Tabs ===== */
 function vPlan(){
-  const days=lecDates(), now=new Date(), nm=now.getHours()*60+now.getMinutes();
-  const isToday=sameDay(days[S.day],now); let nextDone=false;
-  const sems=[1,2,3,4,5,6,7].map(n=>`<button class="chip sem ${n===S.sem?'on':''}" data-act="sem" data-v="${n}">${n}</button>`).join('');
-  const chips=days.map((d,i)=>`<button class="chip day ${i===S.day?'on':''}" data-act="day" data-v="${i}"><b>${wdN()[DAYS[i]]}</b><span>${dm(d)}</span></button>`).join('');
-  const rows=planFor(S.sem)[S.day].map(l=>{
+  const sems=semList().map(n=>`<button class="chip sem ${n===S.sem?'on':''}" data-act="sem" data-v="${n}">${n}</button>`).join('');
+  const head=`<div class="clab">${t('Semester')}</div><div class="chips sems">${sems}</div>`;
+  if(!SCH) return head+`<div class="empty">${t('Kein Stundenplan geladen')}</div>`;
+  const days=studyDays(S.sem), cur=days.includes(S.date)?S.date:days[0];
+  if(!cur) return head+`<div class="empty">${t('Keine weiteren Termine im Plan')}</div>`;
+  const now=new Date(), nm=now.getHours()*60+now.getMinutes(), isToday=cur===ymd(now); let nextDone=false;
+  const chips=days.map(d=>`<button class="chip day ${d===cur?'on':''}" data-act="day" data-v="${d}"><b>${wdOf(d)}</b><span>${dm(parse(d))}</span></button>`).join('');
+  const rows=SCH.lessons.filter(l=>l.date===cur&&l.sems.includes(S.sem)).map(l=>{
     let st='',pill='';
     if(isToday){
-      if(nm>=mins(l.s)&&nm<mins(l.e)){st='now';pill=`<span class="pill">${t('Läuft jetzt')}</span>`}
-      else if(nm>=mins(l.e)){st='done'}
+      if(nm>=mins(l.start)&&nm<mins(l.end)){st='now';pill=`<span class="pill">${t('Läuft jetzt')}</span>`}
+      else if(nm>=mins(l.end)){st='done'}
       else if(!nextDone){nextDone=true;pill=`<span class="pill">${t('Als Nächstes')}</span>`}
     }
-    return `<div class="row ${st}"><div class="tm"><b>${l.s}</b><span>${l.e}</span></div><div class="info">${pill}<h3>${esc(t(l.t))}</h3><p>${t(l.k)} · ${esc(t(l.w))}<br>${t('Raum')} ${esc(roomT(l.r))}</p></div></div>`;
+    const room=l.online?t('Online'):l.room?`${t('Raum')} ${esc(l.room.replace(/tba|tbd/gi,LI?'tbc':'folgt'))}`:(l.tbd?t('Raum folgt'):'');
+    const meta=[l.who?esc(l.who):'',room].filter(Boolean).join(' · ');
+    const tags=(l.dual?'<span class="tag">Dual</span>':'')+(l.provisional?`<span class="tag warn">${t('Vorläufig')}</span>`:'');
+    return `<div class="row ${st}"><div class="tm"><b>${l.start}</b><span>${l.end}</span></div><div class="info">${pill}<h3>${esc(t(l.title))}</h3>${meta?`<p>${meta}</p>`:''}${tags}</div></div>`;
   }).join('');
-  return `<div class="clab">${t('Semester')}</div><div class="chips sems">${sems}</div><div class="chips">${chips}</div>${rows}`;
+  return head+`<div class="chips">${chips}</div>${rows}`;
 }
 function vEvents(){
   const today=midnight(new Date());
@@ -472,15 +463,25 @@ function vEvents(){
   }).join('');
 }
 function vTermine(){
-  const today=midnight(new Date());
-  return TERMINE.filter(x=>parse(x.e||x.d)>=today).map(x=>{
-    const d=parse(x.d), diff=Math.round((d-today)/864e5);
-    const range=x.e?`${dm(d)} – ${dmy(parse(x.e))}`:dmy(d);
+  if(!SCH) return `<div class="empty">${t('Kein Stundenplan geladen')}</div>`;
+  const today=ymd(new Date()), t0=midnight(new Date());
+  const items=[
+    ...SCH.events.map(e=>({k:'e',from:e.date,to:e.date,title:e.title,time:e.time,place:e.online?'Online':e.place,tbd:e.tbd,prov:e.provisional})),
+    ...SCH.notes.map(n=>({k:'n',from:n.from,to:n.to,title:n.text}))
+  ].filter(x=>x.to>=today).sort((a,b)=>a.from.localeCompare(b.from));
+  if(!items.length) return `<div class="empty">${t('Keine weiteren Termine im Plan')}</div>`;
+  return items.map(x=>{
+    const d=parse(x.from), diff=Math.round((d-t0)/864e5);
+    const range=x.to!==x.from?`${dm(d)} – ${dmy(parse(x.to))}`:dmy(d);
+    const tm=x.time?x.time+(/^\d{2}:\d{2}$/.test(x.time)?uhr():''):'';
+    const pl=x.place?esc(x.place):(x.tbd?t('Ort folgt'):'');
+    const line2=[tm,pl].filter(Boolean).join(' · ');
     let w,cl='';
-    if(diff<=0){w=t('Heute');cl='today'}
+    if(x.from<=today&&x.to>=today){w=x.from===x.to?t('Heute'):t('Läuft jetzt');cl='today'}
     else if(diff===1){w=t('Morgen');cl='hot'}
     else {w=LI?`in ${diff} days`:`in ${diff} Tagen`;if(diff<=14)cl='hot'}
-    return `<div class="row"><div class="badge alt"><b>${p2(d.getDate())}</b><span>${monN()[d.getMonth()]}</span></div><div class="info"><h3>${esc(t(x.t))}</h3><p>${range}<br>${esc(t(x.n))}</p></div><div class="when ${cl}">${w}</div></div>`;
+    const prov=x.prov?`<span class="tag warn">${t('Vorläufig')}</span>`:'';
+    return `<div class="row compact"><div class="badge ${x.k==='n'?'alt':''}"><b>${p2(d.getDate())}</b><span>${monN()[d.getMonth()]}</span></div><div class="info"><span class="when ${cl}">${w}</span><h3>${esc(t(x.title))}</h3><p>${range}${line2?'<br>'+line2:''}</p>${prov}</div></div>`;
   }).join('');
 }
 function vMensa(){
@@ -514,7 +515,7 @@ const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const footKaffee=()=>`<div class="pfoot"><button class="addbtn" data-act="kopen">${ICON_PLUS}<span>${t('Kaffee eintragen')}</span></button></div>`;
 
 const TABS=[
-  {id:'plan',   lb:'Stundenplan',       title:'Stundenplan',                 sub:()=>LI?`Computer Science · ${ord(S.sem)} semester`:`Informatik · ${S.sem}. Semester`, ic:'plan', v:vPlan},
+  {id:'plan',   lb:'Stundenplan',       title:'Stundenplan',                 sub:()=>LI?`${PROGRAM[1]} · ${ord(S.sem)} semester`:`${PROGRAM[0]} · ${S.sem}. Semester`, ic:'plan', v:vPlan},
   {id:'events', lb:'Events',            title:'Events',                      sub:'Das passiert demnächst auf dem Campus', ic:'events',  v:vEvents},
   {id:'termine',lb:'Wichtige Termine',  title:'Wichtige Termine',            sub:'Fristen und Semesterzeiten',            ic:'termine', v:vTermine},
   {id:'mensa',  lb:'Mensaplan',         title:'Mensaplan',                   sub:'Preise für Studierende',                ic:'mensa',   v:vMensa},
@@ -586,7 +587,7 @@ function sync(){
   LI = S.lang==='en' ? 1 : 0;
   document.documentElement.lang = LI ? 'en' : 'de';
   document.getElementById('ftl').textContent = t('Tippen Sie auf ein Symbol, um Informationen anzuzeigen.');
-  document.getElementById('ftr').textContent = t('Beispieldaten');
+  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : t('Beispieldaten');
   document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.lang));
   tick();
 }
@@ -624,8 +625,8 @@ document.addEventListener('click',e=>{
     }
     drawModal(); return;
   }
-  if(a==='day')  S.day=+v;
-  if(a==='sem')  S.sem=+v;
+  if(a==='day')  S.date=v;
+  if(a==='sem'){ S.sem=+v; S.date=null; }
   if(a==='mday') S.mday=+v;
   if(a==='fak')  S.fak=v;
   if(a==='per')  S.per=+v;
@@ -659,4 +660,6 @@ bump();
 
 loadK();
 drawAll(false);
+loadSchedule();
+setInterval(loadSchedule, 30*60*1000);
 </script>

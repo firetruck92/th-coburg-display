@@ -8,7 +8,7 @@ Eine einzelne Datei, `index.html` (HTML, CSS und JavaScript, keine Bibliotheken)
 Schrift (Roboto) und Logo sind eingebettet, die Seite funktioniert ohne Internet.
 Links sechs Tabs, rechts das aktive Fenster:
 
-- Stundenplan (Montag, Dienstag, Donnerstag; Auswahl des Semesters 1 bis 7)
+- Stundenplan (echte Daten aus der Excel-Zeitplanung; Auswahl des Semesters 1/3/5/7)
 - Events
 - Wichtige Termine
 - Mensaplan
@@ -22,13 +22,21 @@ Datei im Browser öffnen. Für den Kioskbetrieb zum Beispiel:
 
     chrome --kiosk index.html
 
-Nach 2 Minuten ohne Berührung springt die Anzeige zurück auf den Stundenplan (Semester 3, Deutsch).
+Nach 2 Minuten ohne Berührung springt die Anzeige zurück auf den Stundenplan (Semester 1, Deutsch).
 
 ## Daten
-Alle Inhalte sind derzeit Beispieldaten und stehen als Arrays am Anfang des
-`<script>`-Blocks in `index.html` (PLAN3, MODULES, EVENTS, TERMINE, MENSA, PROFS, KDEF).
-Zum Anbinden echter Quellen diese Arrays durch `fetch()`-Aufrufe ersetzen.
+Stundenplan und Wichtige Termine kommen aus `schedule.js` / `schedule.json`
+(erzeugt aus der Excel-Zeitplanung). Events, Mensaplan, Profs und Kaffee sind
+weiterhin Beispieldaten im `<script>`-Block von `index.html`.
 Die englischen Texte stehen im Wörterbuch `DICT`.
+
+### Stundenplan aktualisieren
+
+    python3 tools/excel_to_json.py Zeitplanung.xlsx .
+
+Benötigt `openpyxl`. Erzeugt `schedule.json` und `schedule.js` (rote Schrift = vorläufig,
+Teams-Links werden nicht übernommen). Offline wird `schedule.js` genutzt; über http(s) lädt
+die Seite `schedule.json` alle 30 Minuten neu.
 
 ## Kaffee Leaderboard
 Neue Einträge werden im Browser des Displays gespeichert (localStorage) und sind auf
