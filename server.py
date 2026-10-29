@@ -4,7 +4,7 @@
     python3 server.py            # nur lokal erreichbar (http://localhost:8080)
     python3 server.py --lan      # auch aus dem WLAN erreichbar (Admin ohne Passwort!)
 """
-import argparse, json, re, shutil, subprocess, sys, tempfile, threading, time, uuid
+import argparse, json, re, shutil, subprocess, sys, tempfile, threading, time, urllib.parse, urllib.request, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -193,6 +193,108 @@ def coffee_remove(name=None):
         tmp.replace(COFFEE)
 
 
+# Mensaplan: wird regelmäßig vom Speiseleitsystem des Studierendenwerks (sls.swo.bayern) geholt
+MENSA_FILE = DATA / 'mensa.json'
+MENSA_LOCATION = 'kronach'
+MENSA_DAYS = 10            # so viele Tage im Voraus laden
+MENSA_EVERY = 3600         # Sekunden zwischen den Abrufen
+MENSA_CATS = ['main', 'vegan', 'side', 'dessert', 'salad', 'pasta_counter', 'food_truck', 'pizza', 'night']
+MENSA_LOCK = threading.Lock()
+SWO = 'https://sls.swo.bayern'
+
+
+def swo_post(path, body):
+    req = urllib.request.Request(SWO + path, data=json.dumps(body).encode(), method='POST',
+                                 headers={'Content-Type': 'application/json',
+                                          'User-Agent': 'hs-coburg-kiosk (Hochschulprojekt)'})
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read().decode('utf-8'))
+
+
+MENSA_IMG = DATA / 'mensa-img'
+IMG_RE = re.compile(r'[\w\-]+\.webp')
+
+
+def mensa_image(m):
+    """Lädt das Foto eines Gerichts (verkleinert) einmalig herunter. Gibt den lokalen Dateinamen oder '' zurück."""
+    fn = m.get('filename')
+    if not fn:
+        return ''
+    name = Path(fn).stem + '-800.webp'
+    if not IMG_RE.fullmatch(name):
+        return ''
+    dest = MENSA_IMG / name
+    if dest.exists():
+        return name
+    try:
+        url = f'{SWO}/_ipx/f_webp,s_800x450/meals/{urllib.parse.quote(fn)}'
+        req = urllib.request.Request(url, headers={'User-Agent': 'hs-coburg-kiosk (Hochschulprojekt)'})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            data = r.read()
+        if len(data) < 500 or len(data) > 2_000_000:
+            return ''
+        MENSA_IMG.mkdir(parents=True, exist_ok=True)
+        tmp = dest.with_suffix('.tmp')
+        tmp.write_bytes(data)
+        tmp.replace(dest)
+        return name
+    except Exception:  # noqa
+        return ''
+
+
+def mensa_load():
+    try:
+        return json.loads(MENSA_FILE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {'days': {}}
+
+
+def mensa_refresh():
+    """Holt den Speiseplan der nächsten Tage. Schlägt ein Tag fehl, bleiben dessen alte Daten erhalten."""
+    with MENSA_LOCK:
+        old = mensa_load()
+        days = {d: v for d, v in old.get('days', {}).items() if d >= time.strftime('%Y-%m-%d')}
+        ok = 0
+        for i in range(MENSA_DAYS):
+            day = time.strftime('%Y-%m-%d', time.localtime(time.time() + i * 86400))
+            try:
+                counts = swo_post('/api/categorie', {'location_name': MENSA_LOCATION, 'date': day,
+                                                     'categories': [[c] for c in MENSA_CATS]})
+                items = []
+                for c in (x['categories'][0] for x in counts if x['meals_count'] > 0):
+                    for m in swo_post('/api/meals', {'date': day, 'location_name': MENSA_LOCATION, 'categories': [c]}):
+                        items.append({'c': c, 't': m.get('title', ''), 'te': m.get('title_eng') or '', 'p': m.get('student'),
+                                      'i': mensa_image(m),
+                                      's': [int(x) for x in str(m.get('essenssymbole') or '').split(',') if x.strip().isdigit()]})
+                ok += 1
+                if items:
+                    days[day] = items
+                else:
+                    days.pop(day, None)
+            except Exception as e:  # noqa
+                sys.stderr.write(f'Mensa {day}: {e}\n')
+        if ok:
+            DATA.mkdir(exist_ok=True)
+            tmp = MENSA_FILE.with_suffix('.tmp')
+            tmp.write_text(json.dumps({'fetched': time.strftime('%Y-%m-%dT%H:%M:%S'), 'location': MENSA_LOCATION,
+                                       'days': days}, ensure_ascii=False), encoding='utf-8')
+            tmp.replace(MENSA_FILE)
+            used = {x['i'] for v in days.values() for x in v if x.get('i')}
+            for f in MENSA_IMG.glob('*.webp'):   # Bilder vergangener Gerichte aufräumen
+                if f.name not in used:
+                    f.unlink(missing_ok=True)
+        return ok
+
+
+def mensa_loop():
+    while True:
+        try:
+            mensa_refresh()
+        except Exception as e:  # noqa
+            sys.stderr.write(f'Mensa: {e}\n')
+        time.sleep(MENSA_EVERY)
+
+
 # Listen, die über die Admin-Seite gepflegt werden: Events und Profs Kontakt
 STORES = {
     'events': {'file': DATA / 'events.json', 'req': ('d', 't'), 'fields': ('d', 'time', 't', 'o', 'g')},
@@ -273,6 +375,14 @@ class H(BaseHTTPRequestHandler):
             return self.send(200, current_info())
         if p == '/api/coffee':
             return self.send(200, {'rows': coffee_rows(coffee_load(), time.time()), 'max': COFFEE_MAX})
+        if p.startswith('/mensa-img/'):
+            name = p[len('/mensa-img/'):]
+            f = MENSA_IMG / name
+            if not IMG_RE.fullmatch(name) or not f.exists():
+                return self.send(404, {'error': 'not found'})
+            return self.send(200, f.read_bytes(), 'image/webp')
+        if p == '/api/mensa':
+            return self.send(200, mensa_load())
         if p in ('/api/events', '/api/profs'):
             return self.send(200, {'items': store_load(p[5:])})
         if p in ('/admin', '/admin/'):
@@ -299,6 +409,10 @@ class H(BaseHTTPRequestHandler):
             if p == '/api/apply':
                 apply_pending()
                 return self.send(200, {'ok': True, 'current': current_info()})
+            if p == '/api/mensa/refresh':
+                if mensa_refresh() == 0:
+                    raise ValueError('Speiseplan konnte nicht geladen werden (keine Verbindung zum Studierendenwerk).')
+                return self.send(200, {'ok': True, 'mensa': mensa_load()})
             m = re.fullmatch(r'/api/(events|profs)/(save|delete)', p)
             if m:
                 n = int(self.headers.get('Content-Length', 0))
@@ -342,6 +456,7 @@ def main():
     ap.add_argument('--lan', action='store_true', help='auch aus dem Netzwerk erreichbar (Admin ohne Passwort)')
     a = ap.parse_args()
     DATA.mkdir(exist_ok=True)
+    threading.Thread(target=mensa_loop, daemon=True).start()
     host = '0.0.0.0' if a.lan else '127.0.0.1'
     print(f'Kiosk:  http://localhost:{a.port}/\nAdmin:  http://localhost:{a.port}/admin' + ('   (im Netzwerk erreichbar)' if a.lan else ''))
     ThreadingHTTPServer((host, a.port), H).serve_forever()

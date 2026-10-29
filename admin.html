@@ -34,6 +34,10 @@ label{display:block;font-size:14px;color:var(--muted)}
 <section class="card"><h2>Kaffee-Leaderboard</h2>
 <div id="cof">Lade…</div>
 <div class="row"><button class="danger" id="cofclear">Leaderboard zurücksetzen</button></div></section>
+<section class="card"><h2>Mensaplan (Kronach)</h2>
+<div id="men">Lade…</div>
+<p style="margin:10px 0 0;color:var(--muted)">Wird automatisch stündlich vom Studierendenwerk geladen.</p>
+<div class="row"><button class="sec" id="menrefresh">Jetzt aktualisieren</button></div></section>
 <section class="card" id="c-events"></section>
 <section class="card" id="c-profs"></section>
 <section class="card"><h2>Alle Daten löschen</h2>
@@ -78,6 +82,12 @@ $('#cof').onclick=e=>{const n=e.target.dataset&&e.target.dataset.name;
  if(n&&confirm(`„${n}“ aus dem Leaderboard entfernen? Eine Sicherung wird angelegt.`))cofPost('/api/coffee/remove',{name:n})};
 $('#cofclear').onclick=()=>{if(confirm('Das gesamte Kaffee-Leaderboard zurücksetzen? Eine Sicherung wird angelegt.'))cofPost('/api/coffee/clear')};
 cofLoad();
+function menDraw(m){const ds=Object.keys(m.days||{}).sort();
+ $('#men').innerHTML=ds.length?`<dl><dt>Tage geladen</dt><dd>${ds.length} (${d(ds[0])} – ${d(ds[ds.length-1])})</dd><dt>Gerichte heute+</dt><dd>${ds.reduce((n,k)=>n+m.days[k].length,0)}</dd><dt>Zuletzt geladen</dt><dd>${(m.fetched||'').replace('T',' ').slice(0,16)}</dd></dl>`:'Noch keine Daten geladen.'}
+fetch('/api/mensa').then(r=>r.json()).then(menDraw);
+$('#menrefresh').onclick=async()=>{const b=$('#menrefresh');b.disabled=true;b.textContent='Lade…';
+ try{const j=await (await fetch('/api/mensa/refresh',{method:'POST'})).json();if(!j.ok)show(j.error,'err');else menDraw(j.mensa)}catch(e){show('Verbindungsfehler','err')}
+ b.disabled=false;b.textContent='Jetzt aktualisieren'};
 /* Events und Profs: gleiche Oberfläche, nur andere Felder */
 const KINDS={
  events:{title:'Events',empty:'Noch keine Events.',

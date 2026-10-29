@@ -110,7 +110,13 @@ nav{width:320px;flex:none;display:flex;flex-direction:column;gap:20px}
 /* Mensa */
 .dish{display:flex;gap:20px;align-items:center;padding:24px 22px;margin-bottom:16px;border-radius:26px;background:var(--soft)}
 .dish .cat{font-size:23px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--red);margin-bottom:6px}
-.dish h3{margin:0;font-size:35px;line-height:1.15;font-weight:700}
+.dish.big{flex-direction:column;align-items:stretch;gap:0;padding:0;overflow:hidden}
+.dish .mi{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;background:#e6e1de}
+.dish .bd{padding:18px 22px 22px}
+.dish .top{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:6px}
+.dish .top .cat{margin:4px 0 0}
+.dish .info{flex:1;min-width:0}
+.dish h3{overflow-wrap:anywhere;hyphens:auto;margin:0;font-size:35px;line-height:1.15;font-weight:700}
 .price{flex:none;text-align:right;font-size:44px;font-weight:900;color:var(--red);font-variant-numeric:tabular-nums;line-height:1}
 .price small{display:block;margin-top:8px;font-size:21px;font-weight:500;color:var(--muted)}
 
@@ -259,28 +265,16 @@ async function loadSchedule(){
 
 /* Events und Profs werden über die Admin-Seite gepflegt und vom Server geladen (/api/events, /api/profs). */
 let EVENTS=[], PROFS=[];
-const MENSA = [
-  [ {c:'Hauptgericht',t:'Hähnchen-Geschnetzeltes mit Reis',g:['Geflügel'],p:'3,80'},
-    {c:'Vegetarisch',t:'Spaghetti Napoli mit Parmesan',g:['vegetarisch'],p:'2,90'},
-    {c:'Aktion',t:'Linsen-Curry mit Naan',g:['vegan'],p:'3,20'},
-    {c:'Suppe',t:'Kürbiscremesuppe',g:['vegan'],p:'1,60'} ],
-  [ {c:'Hauptgericht',t:'Schweinebraten mit Knödeln',g:['Schwein'],p:'3,90'},
-    {c:'Vegetarisch',t:'Gemüselasagne',g:['vegetarisch'],p:'3,10'},
-    {c:'Aktion',t:'Falafel-Bowl mit Hummus',g:['vegan'],p:'3,40'},
-    {c:'Dessert',t:'Apfelstrudel',g:['vegetarisch'],p:'1,50'} ],
-  [ {c:'Hauptgericht',t:'Rinderroulade mit Rotkohl',g:['Rind'],p:'4,60'},
-    {c:'Vegetarisch',t:'Kartoffelgratin',g:['vegetarisch'],p:'3,00'},
-    {c:'Aktion',t:'Pasta Pesto Rosso',g:['vegan'],p:'2,80'},
-    {c:'Dessert',t:'Obstsalat',g:['vegan'],p:'1,30'} ],
-  [ {c:'Hauptgericht',t:'Seelachs mit Kartoffelsalat',g:['Fisch'],p:'4,10'},
-    {c:'Vegetarisch',t:'Spinat-Käse-Maultaschen',g:['vegetarisch'],p:'3,20'},
-    {c:'Aktion',t:'Chili sin Carne',g:['vegan'],p:'3,00'},
-    {c:'Dessert',t:'Vanillepudding',g:['vegetarisch'],p:'1,20'} ],
-  [ {c:'Hauptgericht',t:'Currywurst mit Pommes',g:['Schwein'],p:'3,50'},
-    {c:'Vegetarisch',t:'Käsespätzle mit Röstzwiebeln',g:['vegetarisch'],p:'3,40'},
-    {c:'Aktion',t:'Gemüsepfanne mit Tofu',g:['vegan'],p:'3,30'},
-    {c:'Dessert',t:'Schokomousse',g:['vegetarisch'],p:'1,60'} ]
-];
+/* Mensaplan: wird vom Server aus dem Speiseleitsystem des Studierendenwerks geladen (/api/mensa). */
+let MENSA={days:{}};
+const MCAT={main:['Hauptgericht','Main course'],vegan:['Veganbar','Vegan counter'],side:['Beilage','Side dish'],dessert:['Dessert','Dessert'],
+            salad:['Snack, Salat','Snack, salad'],pasta_counter:['Pastatheke','Pasta counter'],food_truck:['Food Truck','Food truck'],
+            pizza:['Pizza','Pizza'],night:['Abendgericht','Night dish']};
+const MPER100=['salad','pasta_counter'];   /* Preis je 100 g */
+const MSYM={51:['Hausgemacht','Homemade'],52:['Regional','Regional'],53:['Vegetarisch','Vegetarian'],54:['Vegan','Vegan'],55:['Wild','Wild'],
+            56:['Schwein','Pork'],57:['Rind','Beef'],58:['Schaf','Sheep'],59:['Geflügel','Poultry'],60:['Fisch','Fish'],61:['Nachhaltiger Fang','Sustainable catch'],
+            62:['Meeresfrüchte','Seafood'],63:['Mensa Vital','Mensa Vital'],64:['Kräuterküche','Herb kitchen'],65:['Tier. Lab/Gelatine/Honig','Animal rennet/gelatine/honey'],
+            66:['BIO','Organic'],67:['Länderküche','Country kitchen']};
 /* Kaffee: Werte je Person = [heute, Woche, Semester]. Die Daten liegen auf dem Server (/api/coffee), der auch das Limit prüft. */
 const KMAX = 3;   /* max. Tassen pro Person und Stunde (wird vom Server durchgesetzt) */
 const KPER = ['Heute','Woche','Semester'];
@@ -301,7 +295,7 @@ const DICT = {
   'Wer trinkt die meisten Tassen?':'Who drinks the most cups?',
   'Tippen Sie auf ein Symbol, um Informationen anzuzeigen.':'Tap an icon to show information.',
   'Beispieldaten':'Sample data',
-  'Keine Termine':'No classes','Keine Events geplant':'No events planned','Keine Einträge':'No entries','Läuft jetzt':'In progress','Als Nächstes':'Up next','Raum':'Room','Sprechstunde':'Office hours',
+  'Keine Termine':'No classes','Kein Speiseplan verfügbar':'No menu available','Quelle: Studierendenwerk Oberfranken':'Source: Studierendenwerk Oberfranken','pro 100 g':'per 100 g','Keine Events geplant':'No events planned','Keine Einträge':'No entries','Läuft jetzt':'In progress','Als Nächstes':'Up next','Raum':'Room','Sprechstunde':'Office hours',
   'Heute':'Today','Morgen':'Tomorrow','Woche':'Week','Semester':'Semester','Alle':'All',
   'Studierende':'Students','Tassen':'cups','Getrunkene Tassen in dieser Wertung':'Cups in this ranking',
   /* Stundenplan */
@@ -377,7 +371,7 @@ const roomT = r => LI ? r.replace('Labor','Lab') : r;
 const hrs = h => (LI && WD.includes(h.slice(0,2))) ? WDE[WD.indexOf(h.slice(0,2))] + h.slice(2) : h;
 const cupsT = n => LI ? (n===1?'cup':'cups') : (n===1?'Tasse':'Tassen');
 const ord = n => n + (['th','st','nd','rd'][(n%10<4 && (n<11||n>13)) ? n%10 : 0]);
-const priceT = p => LI ? p.replace(',','.') : p;
+const priceT = p => LI ? p.toFixed(2) : p.toFixed(2).replace('.',',');
 
 /* ===== Icons ===== */
 const SV = (b)=>`<svg class="ic" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${b}</svg>`;
@@ -401,19 +395,13 @@ const midnight=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
 const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
 const weekKey=()=>{const d=midnight(new Date());d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d)};
 const sameDay=(a,b)=>a.toDateString()===b.toDateString();
-function weekDates(){
-  const n=midnight(new Date()), dow=n.getDay();
-  const mon=new Date(n); mon.setDate(n.getDate()-((dow+6)%7)+((dow===0||dow===6)?7:0));
-  return [0,1,2,3,4].map(i=>{const x=new Date(mon);x.setDate(mon.getDate()+i);return x});
-}
 const wdOf = iso => (LI?['Sun','Mon','Tue','Wed','Thu','Fri','Sat']:['So','Mo','Di','Mi','Do','Fr','Sa'])[parse(iso).getDay()];
-function todayIdx(){const d=new Date().getDay();return (d===0||d===6)?0:d-1}
 const initials=n=>n.replace(/^Prof\. Dr\. /,'').split(' ').map(w=>w[0]).slice(0,2).join('');
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tagHtml=g=>`<span class="tag ${(g==='vegan'||g==='vegetarisch')?'v':''}">${esc(t(g))}</span>`;
 
 /* ===== Zustand ===== */
-const fresh=()=>({tab:'plan',date:null,mday:todayIdx(),fak:'Alle',per:0,lang:'de',modal:null});
+const fresh=()=>({tab:'plan',date:null,mdate:null,fak:'Alle',per:0,lang:'de',modal:null});
 let S=fresh();
 
 /* ===== Inhalte der Tabs ===== */
@@ -478,9 +466,19 @@ function vTermine(){
   }).join('');
 }
 function vMensa(){
-  const days=weekDates();
-  const chips=days.map((d,i)=>`<button class="chip day ${i===S.mday?'on':''}" data-act="mday" data-v="${i}"><b>${wdN()[i]}</b><span>${dm(d)}</span></button>`).join('');
-  const dishes=MENSA[S.mday].map(x=>`<div class="dish"><div class="info"><div class="cat">${t(x.c)}</div><h3>${esc(t(x.t))}</h3>${x.g.map(tagHtml).join('')}</div><div class="price">${priceT(x.p)} €<small>${t('Studierende')}</small></div></div>`).join('');
+  const today=ymd(new Date());
+  const days=Object.keys(MENSA.days||{}).filter(d=>d>=today).sort().slice(0,5);
+  if(!days.length) return `<div class="empty">${t('Kein Speiseplan verfügbar')}</div>`;
+  const cur=days.includes(S.mdate)?S.mdate:days[0];
+  const chips=days.map(d=>`<button class="chip day ${d===cur?'on':''}" data-act="mdate" data-v="${d}"><b>${wdOf(d)}</b><span>${dm(parse(d))}</span></button>`).join('');
+  const order=Object.keys(MCAT);
+  const dishes=MENSA.days[cur].slice().sort((a,b)=>(!a.i-!b.i)||order.indexOf(a.c)-order.indexOf(b.c)).map(x=>{
+    const tags=x.s.filter(n=>MSYM[n]).map(n=>`<span class="tag ${(n===53||n===54)?'v':''}">${MSYM[n][LI]}</span>`).join('');
+    const per=MPER100.includes(x.c)?t('pro 100 g'):t('Studierende');
+    const cat=(MCAT[x.c]||[x.c,x.c])[LI], title=esc(LI&&x.te?x.te:x.t), price=x.p!=null?`<div class="price">${priceT(x.p)} €<small>${per}</small></div>`:'';
+    if(x.i) return `<div class="dish big"><img class="mi" src="mensa-img/${esc(x.i)}" alt="" onerror="this.parentNode.classList.remove('big');this.remove()"><div class="bd"><div class="top"><div class="cat">${cat}</div>${price}</div><h3>${title}</h3>${tags}</div></div>`;
+    return `<div class="dish"><div class="info"><div class="cat">${cat}</div><h3>${title}</h3>${tags}</div>${price}</div>`;
+  }).join('');
   return `<div class="chips">${chips}</div>${dishes}`;
 }
 function vProfs(){
@@ -522,6 +520,15 @@ const TABS=[
 ];
 
 /* ===== Kaffee: Speicher und Eintrag ===== */
+async function loadMensa(redraw){
+  if(!/^https?:/.test(location.protocol)) return;
+  try{
+    const r=await fetch('api/mensa?'+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    MENSA=await r.json();
+    if(redraw&&S.tab==='mensa'&&!S.modal) drawPanel(false);
+  }catch(e){}
+}
 async function loadList(kind,redraw){
   if(!/^https?:/.test(location.protocol)) return;
   try{
@@ -600,7 +607,7 @@ function sync(){
   LI = S.lang==='en' ? 1 : 0;
   document.documentElement.lang = LI ? 'en' : 'de';
   document.getElementById('ftl').textContent = t('Tippen Sie auf ein Symbol, um Informationen anzuzeigen.');
-  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : S.tab==='mensa' ? t('Beispieldaten') : '';
+  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : S.tab==='mensa' ? t('Quelle: Studierendenwerk Oberfranken') : '';
   document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.lang));
   tick();
 }
@@ -617,7 +624,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   const a=b.dataset.act, v=b.dataset.v;
   if(a==='lang'){ if(S.lang===v) return; S.lang=v; document.getElementById('toast').hidden=true; drawAll(false); return; }
-  if(a==='tab'){ if(S.tab===v) return; S.tab=v; drawAll(true); if(v==='kaffee') loadK(true); else if(v==='events'||v==='profs') loadList(v,true); return; }
+  if(a==='tab'){ if(S.tab===v) return; S.tab=v; drawAll(true); if(v==='kaffee') loadK(true); else if(v==='events'||v==='profs') loadList(v,true); else if(v==='mensa') loadMensa(true); return; }
   if(a==='kopen'){ S.modal={name:'',cups:1}; document.getElementById('toast').hidden=true; drawModal(); return; }
   if(a==='kclose'){ S.modal=null; drawModal(); return; }
   if(S.modal && a.charAt(0)==='k'){
@@ -642,7 +649,7 @@ document.addEventListener('click',e=>{
     drawModal(); return;
   }
   if(a==='day')  S.date=v;
-  if(a==='mday') S.mday=+v;
+  if(a==='mdate') S.mdate=v;
   if(a==='fak')  S.fak=v;
   if(a==='per')  S.per=+v;
   drawPanel(true);
@@ -656,7 +663,7 @@ function tick(){
   document.getElementById('dat').textContent=n.toLocaleDateString(LI?'en-GB':'de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 setInterval(tick,1000);
-setInterval(()=>{loadK(true);loadList('events',true);loadList('profs',true)},60000);
+setInterval(()=>{loadK(true);loadList('events',true);loadList('profs',true);loadMensa(true)},60000);
 setInterval(()=>{ if(S.tab==='plan'){const y=document.querySelector('.pbody'),s=y?y.scrollTop:0;drawPanel(false);const z=document.querySelector('.pbody');if(z)z.scrollTop=s;} },60000);
 
 /* Skalierung auf die Fenstergröße (auf dem 1080x1920-Display 1:1) */
@@ -673,7 +680,7 @@ function bump(){clearTimeout(idle);idle=setTimeout(()=>{S=fresh();drawAll(true)}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,bump,{passive:true}));
 bump();
 
-loadK(true); loadList('events',true); loadList('profs',true);
+loadK(true); loadList('events',true); loadList('profs',true); loadMensa(true);
 drawAll(false);
 loadSchedule();
 setInterval(loadSchedule, 60*1000);
