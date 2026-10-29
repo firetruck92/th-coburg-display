@@ -5,36 +5,32 @@ Zielgerät: ET 4363L, Auflösung 1080 × 1920 (Hochformat).
 
 ## Inhalt
 Eine einzelne Datei, `index.html` (HTML, CSS und JavaScript, keine Bibliotheken).
+Schrift (Roboto) und Logo sind eingebettet, die Seite funktioniert ohne Internet.
 Links sechs Tabs, rechts das aktive Fenster:
 
-- Stundenplan
+- Stundenplan (Montag, Dienstag, Donnerstag; Auswahl des Semesters 1 bis 7)
 - Events
 - Wichtige Termine
 - Mensaplan
 - Profs Kontakt Informationen
-- Kaffee Leaderboard
+- Kaffee Leaderboard (mit Dialog zum Eintragen neuer Tassen)
+
+Oben rechts lässt sich zwischen Deutsch und Englisch umschalten.
 
 ## Starten
 Datei im Browser öffnen. Für den Kioskbetrieb zum Beispiel:
 
     chrome --kiosk index.html
 
-Nach 2 Minuten ohne Berührung springt die Anzeige zurück auf den Stundenplan.
-
-## Sprache
-Oben rechts lässt sich zwischen Deutsch und Englisch umschalten. Nach 2 Minuten ohne
-Berührung wird wieder auf Deutsch zurückgesetzt. Die englischen Texte stehen im
-Wörterbuch `DICT` im `<script>`-Block.
-
-## Logo
-Das Logo der Hochschule liegt nicht im Repository. Eine weiße Version mit transparentem
-Hintergrund als `logo.svg` oder `logo.png` neben `index.html` legen, dann erscheint es
-automatisch oben links. Ohne Datei wird der Schriftzug angezeigt.
+Nach 2 Minuten ohne Berührung springt die Anzeige zurück auf den Stundenplan (Semester 3, Deutsch).
 
 ## Daten
 Alle Inhalte sind derzeit Beispieldaten und stehen als Arrays am Anfang des
-`<script>`-Blocks in `index.html` (PLAN, EVENTS, TERMINE, MENSA, PROFS, KAFFEE).
+`<script>`-Blocks in `index.html` (PLAN3, MODULES, EVENTS, TERMINE, MENSA, PROFS, KDEF).
 Zum Anbinden echter Quellen diese Arrays durch `fetch()`-Aufrufe ersetzen.
+Die englischen Texte stehen im Wörterbuch `DICT`.
 
-## Hinweis
-Die Schrift Roboto ist in `index.html` eingebettet. Die Seite funktioniert daher ohne Internet.
+## Kaffee Leaderboard
+Neue Einträge werden im Browser des Displays gespeichert (localStorage) und sind auf
+anderen Geräten nicht sichtbar. "Heute" und "Woche" beginnen automatisch neu.
+Für ein gemeinsames Leaderboard wird ein kleiner Server benötigt.
