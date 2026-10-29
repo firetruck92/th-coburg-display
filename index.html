@@ -147,10 +147,10 @@ nav{width:320px;flex:none;display:flex;flex-direction:column;gap:20px}
 
 footer{height:72px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 44px;font-size:24px;color:#5a5552}
 
-/* Stundenplan: Semester-Auswahl */
+.semsec{margin-top:22px}
+.semhead{display:flex;align-items:center;height:64px;padding:0 24px;border-radius:20px;color:#fff;background:var(--grad);font-size:30px;text-transform:uppercase;letter-spacing:.04em}
+.semnone{padding:22px 24px;font-size:26px;color:var(--muted)}
 .clab{font-size:24px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 10px 4px}
-.chips.sems{flex-wrap:nowrap;margin-bottom:22px}
-.chip.sem{flex:1;min-width:0;min-height:88px;padding:0;border-radius:24px;font-size:34px;font-weight:700}
 /* Leaderboard: Fußleiste, Leerzustand */
 .pfoot{flex:none;padding:20px 32px 28px;border-top:2px solid var(--line);background:#fff}
 .addbtn{width:100%;height:104px;border-radius:30px;background:var(--grad);color:#fff;font-size:36px;font-weight:700;text-transform:uppercase;letter-spacing:.02em;display:flex;align-items:center;justify-content:center;gap:18px;box-shadow:0 10px 22px rgba(226,35,26,.3);transition:transform .12s}
@@ -238,14 +238,13 @@ const WDE = ['Mon','Tue','Wed','Thu','Fri'];
    schedule.js wird aus der Excel-Zeitplanung erzeugt (tools/excel_to_json.py) und definiert window.SCHEDULE.
    Läuft die Seite über http(s), wird zusätzlich schedule.json regelmäßig neu geladen. */
 const PROGRAM = ['Wirtschaftsinformatik','Business Informatics'];   /* bitte prüfen */
-const DEFAULT_SEM = 1;
 let SCH = window.SCHEDULE || null;
 if(!SCH){ try{ SCH = JSON.parse(localStorage.getItem('sched-v1')||'null'); }catch(e){} }
 const semList = () => (SCH && SCH.meta && SCH.meta.semesters) || [1,3,5,7];
-function studyDays(sem){   /* die nächsten 5 Tage ab heute, an denen dieses Semester Termine hat */
+function studyDays(){   /* die nächsten 5 Tage ab heute, an denen es Termine gibt */
   if(!SCH) return [];
   const today = ymd(new Date());
-  return [...new Set(SCH.lessons.filter(l=>l.sems.includes(sem)&&l.date>=today).map(l=>l.date))].sort().slice(0,5);
+  return [...new Set(SCH.lessons.filter(l=>l.date>=today).map(l=>l.date))].sort().slice(0,5);
 }
 async function loadSchedule(){
   if(!/^https?:/.test(location.protocol)) return;
@@ -317,7 +316,7 @@ const DICT = {
   'Wer trinkt die meisten Tassen?':'Who drinks the most cups?',
   'Tippen Sie auf ein Symbol, um Informationen anzuzeigen.':'Tap an icon to show information.',
   'Beispieldaten':'Sample data',
-  'Läuft jetzt':'In progress','Als Nächstes':'Up next','Raum':'Room','Sprechstunde':'Office hours',
+  'Keine Termine':'No classes','Läuft jetzt':'In progress','Als Nächstes':'Up next','Raum':'Room','Sprechstunde':'Office hours',
   'Heute':'Today','Morgen':'Tomorrow','Woche':'Week','Semester':'Semester','Alle':'All',
   'Studierende':'Students','Tassen':'cups','Getrunkene Tassen in dieser Wertung':'Cups in this ranking',
   /* Stundenplan */
@@ -429,31 +428,38 @@ const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',
 const tagHtml=g=>`<span class="tag ${(g==='vegan'||g==='vegetarisch')?'v':''}">${esc(t(g))}</span>`;
 
 /* ===== Zustand ===== */
-const fresh=()=>({tab:'plan',date:null,sem:DEFAULT_SEM,mday:todayIdx(),fak:'Alle',per:0,lang:'de',modal:null});
+const fresh=()=>({tab:'plan',date:null,mday:todayIdx(),fak:'Alle',per:0,lang:'de',modal:null});
 let S=fresh();
 
 /* ===== Inhalte der Tabs ===== */
 function vPlan(){
-  const sems=semList().map(n=>`<button class="chip sem ${n===S.sem?'on':''}" data-act="sem" data-v="${n}">${n}</button>`).join('');
-  const head=`<div class="clab">${t('Semester')}</div><div class="chips sems">${sems}</div>`;
-  if(!SCH) return head+`<div class="empty">${t('Kein Stundenplan geladen')}</div>`;
-  const days=studyDays(S.sem), cur=days.includes(S.date)?S.date:days[0];
-  if(!cur) return head+`<div class="empty">${t('Keine weiteren Termine im Plan')}</div>`;
-  const now=new Date(), nm=now.getHours()*60+now.getMinutes(), isToday=cur===ymd(now); let nextDone=false;
+  if(!SCH) return `<div class="empty">${t('Kein Stundenplan geladen')}</div>`;
+  const days=studyDays(), cur=days.includes(S.date)?S.date:days[0];
+  if(!cur) return `<div class="empty">${t('Keine weiteren Termine im Plan')}</div>`;
+  const now=new Date(), nm=now.getHours()*60+now.getMinutes(), isToday=cur===ymd(now);
   const chips=days.map(d=>`<button class="chip day ${d===cur?'on':''}" data-act="day" data-v="${d}"><b>${wdOf(d)}</b><span>${dm(parse(d))}</span></button>`).join('');
-  const rows=SCH.lessons.filter(l=>l.date===cur&&l.sems.includes(S.sem)).map(l=>{
+  const day=SCH.lessons.filter(l=>l.date===cur);
+  const sections=semList().map(sem=>{
+    const list=day.filter(l=>l.sems.includes(sem)).sort((a,b)=>mins(a.start)-mins(b.start)||mins(a.end)-mins(b.end));
+    const nextStart=Math.min(...list.map(l=>mins(l.start)).filter(m=>m>nm));   /* parallele Veranstaltungen zählen gemeinsam als "Als Nächstes" */
+    const rows=list.map(l=>{
     let st='',pill='';
     if(isToday){
       if(nm>=mins(l.start)&&nm<mins(l.end)){st='now';pill=`<span class="pill">${t('Läuft jetzt')}</span>`}
       else if(nm>=mins(l.end)){st='done'}
-      else if(!nextDone){nextDone=true;pill=`<span class="pill">${t('Als Nächstes')}</span>`}
+      else if(mins(l.start)===nextStart){pill=`<span class="pill">${t('Als Nächstes')}</span>`}
     }
     const room=l.online?t('Online'):l.room?`${t('Raum')} ${esc(l.room.replace(/tba|tbd/gi,LI?'tbc':'folgt'))}`:(l.tbd?t('Raum folgt'):'');
     const meta=[l.who?esc(l.who):'',room].filter(Boolean).join(' · ');
-    const tags=(l.dual?'<span class="tag">Dual</span>':'')+(l.provisional?`<span class="tag warn">${t('Vorläufig')}</span>`:'');
+    const others=l.sems.filter(n=>n!==sem);
+    const joint=others.length?`<span class="tag">${LI?'Joint with sem.':'Gemeinsam mit'} ${others.map(n=>n+'.').join(' · ')}${LI?'':' Semester'}</span>`:'';
+    const tags=joint+(l.dual?'<span class="tag">Dual</span>':'')+(l.provisional?`<span class="tag warn">${t('Vorläufig')}</span>`:'');
     return `<div class="row ${st}"><div class="tm"><b>${l.start}</b><span>${l.end}</span></div><div class="info">${pill}<h3>${esc(t(l.title))}</h3>${meta?`<p>${meta}</p>`:''}${tags}</div></div>`;
+    }).join('');
+    const head=`<div class="semhead"><b>${LI?`${ord(sem)} semester`:`${sem}. Semester`}</b></div>`;
+    return `<section class="semsec">${head}${rows||`<div class="semnone">${t('Keine Termine')}</div>`}</section>`;
   }).join('');
-  return head+`<div class="chips">${chips}</div>${rows}`;
+  return `<div class="chips">${chips}</div>${sections}`;
 }
 function vEvents(){
   const today=midnight(new Date());
@@ -515,7 +521,7 @@ const ICON_BACK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const footKaffee=()=>`<div class="pfoot"><button class="addbtn" data-act="kopen">${ICON_PLUS}<span>${t('Kaffee eintragen')}</span></button></div>`;
 
 const TABS=[
-  {id:'plan',   lb:'Stundenplan',       title:'Stundenplan',                 sub:()=>LI?`${PROGRAM[1]} · ${ord(S.sem)} semester`:`${PROGRAM[0]} · ${S.sem}. Semester`, ic:'plan', v:vPlan},
+  {id:'plan',   lb:'Stundenplan',       title:'Stundenplan',                 sub:()=>PROGRAM[LI?1:0], ic:'plan', v:vPlan},
   {id:'events', lb:'Events',            title:'Events',                      sub:'Das passiert demnächst auf dem Campus', ic:'events',  v:vEvents},
   {id:'termine',lb:'Wichtige Termine',  title:'Wichtige Termine',            sub:'Fristen und Semesterzeiten',            ic:'termine', v:vTermine},
   {id:'mensa',  lb:'Mensaplan',         title:'Mensaplan',                   sub:'Preise für Studierende',                ic:'mensa',   v:vMensa},
@@ -626,7 +632,6 @@ document.addEventListener('click',e=>{
     drawModal(); return;
   }
   if(a==='day')  S.date=v;
-  if(a==='sem'){ S.sem=+v; S.date=null; }
   if(a==='mday') S.mday=+v;
   if(a==='fak')  S.fak=v;
   if(a==='per')  S.per=+v;

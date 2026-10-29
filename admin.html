@@ -12,7 +12,7 @@ h2{margin:0 0 8px;font-size:16px;text-transform:uppercase;color:var(--muted);let
 .drop{border:2px dashed #bbb;border-radius:12px;padding:28px;text-align:center;cursor:pointer;color:var(--muted)}
 .drop.over{border-color:var(--r);background:#fff5f3}
 button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px 22px;cursor:pointer;background:linear-gradient(90deg,var(--r),var(--o));color:#fff}
-button.sec{background:#eee;color:var(--ink)}button:disabled{opacity:.4;cursor:default}
+button.sec{background:#eee;color:var(--ink)}button.danger{background:#a1180f}button:disabled{opacity:.4;cursor:default}
 dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}dt{color:var(--muted)}dd{margin:0;font-weight:700}
 .err{background:#fdecea;color:#a1180f;border-radius:10px;padding:12px}.ok{background:#e8f6ea;color:#1b6b2a;border-radius:10px;padding:12px}
 .row{display:flex;gap:10px;margin-top:14px}[hidden]{display:none!important}
@@ -26,6 +26,9 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}dt{color:va
 <div id="msg" style="margin-top:12px"></div></section>
 <section class="card" id="prev" hidden><h2>Vorschau der neuen Datei</h2><div id="sum"></div>
 <div class="row"><button id="apply">Übernehmen &amp; auf Display anzeigen</button><button class="sec" id="cancel">Verwerfen</button></div></section>
+<section class="card"><h2>Alle Daten löschen</h2>
+<p style="margin:0 0 12px;color:var(--muted)">Leert Stundenplan und Wichtige Termine auf dem Display. Vorher wird automatisch eine Sicherung angelegt.</p>
+<button class="danger" id="clear">Alle Daten löschen</button></section>
 </main>
 <script>
 const $=s=>document.querySelector(s);
@@ -52,5 +55,11 @@ $('#apply').onclick=async()=>{$('#apply').disabled=true;
  const j=await (await fetch('/api/apply',{method:'POST'})).json();$('#apply').disabled=false;
  if(!j.ok)return show(j.error,'err');
  $('#prev').hidden=true;$('#file').value='';show('Übernommen. Das Display aktualisiert sich innerhalb einer Minute.','ok');status()};
+$('#clear').onclick=async()=>{
+ if(!confirm('Wirklich alle Daten (Stundenplan und Termine) löschen? Eine Sicherung wird angelegt.'))return;
+ $('#clear').disabled=true;
+ const j=await (await fetch('/api/clear',{method:'POST'})).json();$('#clear').disabled=false;
+ if(!j.ok)return show(j.error,'err');
+ $('#prev').hidden=true;$('#file').value='';show('Alle Daten gelöscht. Das Display aktualisiert sich innerhalb einer Minute.','ok');status()};
 status();
 </script></body></html>

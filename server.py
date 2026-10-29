@@ -49,15 +49,26 @@ def convert(xlsx_bytes):
     return s
 
 
-def apply_pending():
-    if not (PENDING / 'schedule.json').exists():
-        raise ValueError('Keine Vorschau vorhanden. Bitte Datei zuerst hochladen.')
+def backup_current():
     BACKUP.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime('%Y%m%d-%H%M%S')
     for name in ('schedule.json', 'schedule.js'):
         cur = ROOT / name
         if cur.exists():
             shutil.copy2(cur, BACKUP / f'{stamp}-{name}')
+
+
+def prune_backups():
+    old = sorted(BACKUP.glob('*-schedule.json'))
+    for f in old[:-10]:  # nur die letzten 10 Sicherungen behalten
+        f.unlink(missing_ok=True)
+        (BACKUP / f.name.replace('.json', '.js')).unlink(missing_ok=True)
+
+
+def apply_pending():
+    if not (PENDING / 'schedule.json').exists():
+        raise ValueError('Keine Vorschau vorhanden. Bitte Datei zuerst hochladen.')
+    backup_current()
     # atomar ersetzen, damit der Kiosk nie eine halbe Datei liest
     for name in ('schedule.js', 'schedule.json'):
         tmp = ROOT / (name + '.tmp')
@@ -65,10 +76,23 @@ def apply_pending():
         tmp.replace(ROOT / name)
     shutil.copy2(PENDING / 'upload.xlsx', DATA / 'zeitplanung.xlsx')
     shutil.rmtree(PENDING, ignore_errors=True)
-    old = sorted(BACKUP.glob('*-schedule.json'))
-    for f in old[:-10]:  # nur die letzten 10 Sicherungen behalten
-        f.unlink(missing_ok=True)
-        (BACKUP / f.name.replace('.json', '.js')).unlink(missing_ok=True)
+    prune_backups()
+
+
+def clear_all():
+    """Stundenplan und Termine leeren. Vorher wird eine Sicherung angelegt."""
+    backup_current()
+    empty = {'meta': {'cleared': time.strftime('%Y-%m-%dT%H:%M:%S'), 'semesters': []},
+             'lessons': [], 'events': [], 'notes': []}
+    text = {'schedule.json': json.dumps(empty, ensure_ascii=False, indent=1),
+            'schedule.js': 'window.SCHEDULE = ' + json.dumps(empty, ensure_ascii=False) + ';\n'}
+    for name, body in text.items():
+        tmp = ROOT / (name + '.tmp')
+        tmp.write_text(body, encoding='utf-8')
+        tmp.replace(ROOT / name)
+    (DATA / 'zeitplanung.xlsx').unlink(missing_ok=True)
+    shutil.rmtree(PENDING, ignore_errors=True)
+    prune_backups()
 
 
 def current_info():
@@ -122,6 +146,9 @@ class H(BaseHTTPRequestHandler):
                 return self.send(200, {'ok': True, 'summary': s})
             if p == '/api/apply':
                 apply_pending()
+                return self.send(200, {'ok': True, 'current': current_info()})
+            if p == '/api/clear':
+                clear_all()
                 return self.send(200, {'ok': True, 'current': current_info()})
             self.send(404, {'error': 'not found'})
         except ValueError as e:
