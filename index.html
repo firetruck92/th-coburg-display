@@ -295,9 +295,8 @@ const PROFS = [
   {n:'Prof. Dr. Paul Beispiel',f:'Wirtschaft',r:'W 1.14',h:'Mo 14:00–15:00',m:'p.beispiel@hs-coburg.de',p:'+49 9561 317-104'},
   {n:'Prof. Dr. Clara Probe',f:'Design',r:'D 2.02',h:'Fr 10:00–11:00',m:'c.probe@hs-coburg.de',p:'+49 9561 317-105'}
 ];
-/* Kaffee: Werte je Person = [heute, Woche, Semester]. Neue Einträge werden im Browser des Displays gespeichert (localStorage). */
-const KDEF = [['Lena K.',[9,38,412]],['Max R.',[8,41,455]],['Sophie W.',[7,33,380]],['Jonas B.',[6,36,366]],
-              ['Mia T.',[5,29,301]],['Felix H.',[5,31,340]],['Anna S.',[4,25,289]],['Paul D.',[3,22,254]]];
+/* Kaffee: Werte je Person = [heute, Woche, Semester]. Die Daten liegen auf dem Server (/api/coffee), der auch das Limit prüft. */
+const KMAX = 3;   /* max. Tassen pro Person und Stunde (wird vom Server durchgesetzt) */
 const KPER = ['Heute','Woche','Semester'];
 
 /* ===== Sprache: Deutsch ist die Grundsprache, DICT enthält die englischen Texte. Fehlt ein Eintrag, bleibt der deutsche Text. ===== */
@@ -530,25 +529,30 @@ const TABS=[
 ];
 
 /* ===== Kaffee: Speicher und Eintrag ===== */
-let KROWS=[], KDAY='', KWEEK='';
-function saveK(){try{localStorage.setItem('kaffee-v1',JSON.stringify({rows:KROWS,day:KDAY,week:KWEEK}))}catch(e){}}
-function loadK(){
-  let o=null; try{o=JSON.parse(localStorage.getItem('kaffee-v1')||'null')}catch(e){}
-  if(o&&Array.isArray(o.rows)&&o.rows.every(r=>r&&typeof r.n==='string'&&Array.isArray(r.v)&&r.v.length===3)){KROWS=o.rows;KDAY=o.day;KWEEK=o.week}
-  else{KROWS=KDEF.map(([n,v])=>({n,v:v.slice()}));KDAY=ymd(new Date());KWEEK=weekKey()}
-  rollover(false);
+let KROWS=[];
+async function loadK(redraw){
+  if(!/^https?:/.test(location.protocol)) return;
+  try{
+    const r=await fetch('api/coffee?'+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    KROWS=(await r.json()).rows;
+    if(redraw&&S.tab==='kaffee'&&!S.modal) drawPanel(false);
+  }catch(e){}
 }
-function rollover(redraw){   /* "Heute" und "Woche" beginnen automatisch neu */
-  const d=ymd(new Date()), w=weekKey(); let ch=false;
-  if(d!==KDAY){KROWS.forEach(r=>r.v[0]=0);KDAY=d;ch=true}
-  if(w!==KWEEK){KROWS.forEach(r=>r.v[1]=0);KWEEK=w;ch=true}
-  if(ch){saveK();if(redraw&&S.tab==='kaffee')drawPanel(false)}
-}
-function addScore(name,c){
-  name=name.trim().replace(/\s+/g,' '); if(!name) return null;
-  let row=KROWS.find(r=>r.n.toLowerCase()===name.toLowerCase());
-  if(!row){row={n:name,v:[0,0,0]};KROWS.push(row)}
-  row.v=row.v.map(x=>x+c); saveK(); return row.n;
+/* Trägt Tassen auf dem Server ein. Gibt {ok:true,who} oder {ok:false,msg} zurück. */
+async function addScore(name,c){
+  name=name.trim().replace(/\s+/g,' ');
+  try{
+    const r=await fetch('api/coffee',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,cups:c})});
+    const j=await r.json();
+    if(j.ok){ KROWS=j.rows; return {ok:true,who:(KROWS.find(x=>x.n.toLowerCase()===name.toLowerCase())||{n:name}).n}; }
+    if(r.status===429){
+      const rem=j.remaining, m=j.retry_minutes;
+      return {ok:false,msg:LI?`Limit reached: max. ${KMAX} cups per hour. ${rem>0?`You can still add ${rem}. `:''}Try again in ${m} min.`
+                             :`Limit erreicht: max. ${KMAX} Tassen pro Stunde. ${rem>0?`Noch ${rem} möglich. `:''}Nächster Versuch in ${m} Min.`};
+    }
+  }catch(e){}
+  return {ok:false,msg:LI?'Could not save. Please try again.':'Speichern nicht möglich. Bitte erneut versuchen.'};
 }
 let toastTimer;
 function toast(msg){
@@ -593,7 +597,7 @@ function sync(){
   LI = S.lang==='en' ? 1 : 0;
   document.documentElement.lang = LI ? 'en' : 'de';
   document.getElementById('ftl').textContent = t('Tippen Sie auf ein Symbol, um Informationen anzuzeigen.');
-  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : t('Beispieldaten');
+  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : S.tab==='kaffee' ? '' : t('Beispieldaten');
   document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.lang));
   tick();
 }
@@ -610,7 +614,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   const a=b.dataset.act, v=b.dataset.v;
   if(a==='lang'){ if(S.lang===v) return; S.lang=v; document.getElementById('toast').hidden=true; drawAll(false); return; }
-  if(a==='tab'){ if(S.tab===v) return; S.tab=v; drawAll(true); return; }
+  if(a==='tab'){ if(S.tab===v) return; S.tab=v; drawAll(true); if(v==='kaffee') loadK(true); return; }
   if(a==='kopen'){ S.modal={name:'',cups:1}; document.getElementById('toast').hidden=true; drawModal(); return; }
   if(a==='kclose'){ S.modal=null; drawModal(); return; }
   if(S.modal && a.charAt(0)==='k'){
@@ -618,15 +622,18 @@ document.addEventListener('click',e=>{
     else if(a==='kkey') addChar(v);
     else if(a==='kback') S.modal.name=S.modal.name.slice(0,-1);
     else if(a==='kspace'){ const n=S.modal.name; if(n&&!n.endsWith(' ')&&n.length<14) S.modal.name=n+' '; }
-    else if(a==='kplus') S.modal.cups=Math.min(10,S.modal.cups+1);
+    else if(a==='kplus') S.modal.cups=Math.min(KMAX,S.modal.cups+1);
     else if(a==='kminus') S.modal.cups=Math.max(1,S.modal.cups-1);
     else if(a==='ksave'){
       if(!S.modal.name.trim()) return;
-      const c=S.modal.cups, who=addScore(S.modal.name,c);
+      const c=S.modal.cups, nm=S.modal.name;
       S.modal=null; drawModal();
-      if(S.tab==='kaffee') drawPanel(false);
-      const order=KROWS.map(r=>({n:r.n,v:r.v[S.per]})).sort((x,y)=>y.v-x.v), pos=order.findIndex(r=>r.n===who)+1;
-      toast(LI?`Thanks! +${c} ${cupsT(c)} for ${who} · rank ${pos}`:`Danke! +${c} ${cupsT(c)} für ${who} · Platz ${pos}`);
+      addScore(nm,c).then(res=>{
+        if(!res.ok){ toast(res.msg); return; }
+        if(S.tab==='kaffee') drawPanel(false);
+        const who=res.who, order=KROWS.map(r=>({n:r.n,v:r.v[S.per]})).sort((x,y)=>y.v-x.v), pos=order.findIndex(r=>r.n===who)+1;
+        toast(LI?`Thanks! +${c} ${cupsT(c)} for ${who} · rank ${pos}`:`Danke! +${c} ${cupsT(c)} für ${who} · Platz ${pos}`);
+      });
       return;
     }
     drawModal(); return;
@@ -646,7 +653,7 @@ function tick(){
   document.getElementById('dat').textContent=n.toLocaleDateString(LI?'en-GB':'de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 setInterval(tick,1000);
-setInterval(()=>rollover(true),60000);
+setInterval(()=>loadK(true),60000);
 setInterval(()=>{ if(S.tab==='plan'){const y=document.querySelector('.pbody'),s=y?y.scrollTop:0;drawPanel(false);const z=document.querySelector('.pbody');if(z)z.scrollTop=s;} },60000);
 
 /* Skalierung auf die Fenstergröße (auf dem 1080x1920-Display 1:1) */
@@ -663,7 +670,7 @@ function bump(){clearTimeout(idle);idle=setTimeout(()=>{S=fresh();drawAll(true)}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,bump,{passive:true}));
 bump();
 
-loadK();
+loadK(true);
 drawAll(false);
 loadSchedule();
 setInterval(loadSchedule, 60*1000);

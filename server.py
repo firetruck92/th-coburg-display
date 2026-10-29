@@ -4,7 +4,7 @@
     python3 server.py            # nur lokal erreichbar (http://localhost:8080)
     python3 server.py --lan      # auch aus dem WLAN erreichbar (Admin ohne Passwort!)
 """
-import argparse, json, shutil, subprocess, sys, tempfile, time
+import argparse, json, shutil, subprocess, sys, tempfile, threading, time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -105,6 +105,94 @@ def current_info():
     return s
 
 
+COFFEE = DATA / 'coffee.json'
+COFFEE_LOCK = threading.Lock()
+COFFEE_MAX = 3         # Tassen pro Person ...
+COFFEE_WINDOW = 3600   # ... in diesem Zeitfenster (Sekunden, gleitend)
+COFFEE_NAME_MAX = 30
+
+
+def coffee_load():
+    try:
+        return json.loads(COFFEE.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+
+
+def semester_start():
+    """Beginn der Semesterwertung: erster Vorlesungstag im Stundenplan (sonst alles zählen)."""
+    try:
+        js = json.loads((ROOT / 'schedule.json').read_text(encoding='utf-8'))
+        first = min(l['date'] for l in js['lessons'])
+        return time.mktime(time.strptime(first, '%Y-%m-%d'))
+    except (OSError, ValueError, KeyError):
+        return 0
+
+
+def coffee_rows(entries, now):
+    lt = time.localtime(now)
+    day = time.mktime((lt.tm_year, lt.tm_mon, lt.tm_mday, 0, 0, 0, 0, 0, -1))
+    week = day - lt.tm_wday * 86400
+    sem = semester_start()
+    rows = {}
+    for e in entries:
+        r = rows.setdefault(e['n'].lower(), {'n': e['n'], 'v': [0, 0, 0]})
+        if e['t'] >= day:
+            r['v'][0] += e['c']
+        if e['t'] >= week:
+            r['v'][1] += e['c']
+        if e['t'] >= sem:
+            r['v'][2] += e['c']
+    return list(rows.values())
+
+
+def coffee_add(name, cups):
+    """Trägt Tassen ein. Gibt (rows, None) oder (None, Fehler-dict) bei überschrittenem Limit zurück."""
+    name = ' '.join(str(name).split())[:COFFEE_NAME_MAX]
+    if not name:
+        raise ValueError('Name fehlt.')
+    if not isinstance(cups, int) or not 1 <= cups <= COFFEE_MAX:
+        raise ValueError(f'Anzahl Tassen muss zwischen 1 und {COFFEE_MAX} liegen.')
+    with COFFEE_LOCK:
+        now = time.time()
+        entries = coffee_load()
+        recent = sorted((e for e in entries if e['n'].lower() == name.lower() and now - e['t'] < COFFEE_WINDOW),
+                        key=lambda e: e['t'])
+        used = sum(e['c'] for e in recent)
+        if used + cups > COFFEE_MAX:
+            need, freed, retry = used + cups - COFFEE_MAX, 0, 0
+            for e in recent:
+                freed += e['c']
+                if freed >= need:
+                    retry = e['t'] + COFFEE_WINDOW - now
+                    break
+            return None, {'limit': COFFEE_MAX, 'remaining': COFFEE_MAX - used, 'retry_minutes': max(1, int(retry // 60) + 1)}
+        # vorhandene Schreibweise des Namens beibehalten
+        known = next((e['n'] for e in entries if e['n'].lower() == name.lower()), name)
+        entries.append({'n': known, 'c': cups, 't': now})
+        DATA.mkdir(exist_ok=True)
+        tmp = COFFEE.with_suffix('.tmp')
+        tmp.write_text(json.dumps(entries, ensure_ascii=False), encoding='utf-8')
+        tmp.replace(COFFEE)
+        return coffee_rows(entries, now), None
+
+
+def coffee_remove(name=None):
+    """Entfernt eine Person (name) oder alle Einträge (name=None). Vorher Sicherung in data/backup/."""
+    with COFFEE_LOCK:
+        entries = coffee_load()
+        if not entries:
+            return
+        BACKUP.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(COFFEE, BACKUP / f'{time.strftime("%Y%m%d-%H%M%S")}-coffee.json')
+        for f in sorted(BACKUP.glob('*-coffee.json'))[:-10]:
+            f.unlink(missing_ok=True)
+        keep = [] if name is None else [e for e in entries if e['n'].lower() != ' '.join(str(name).split()).lower()]
+        tmp = COFFEE.with_suffix('.tmp')
+        tmp.write_text(json.dumps(keep, ensure_ascii=False), encoding='utf-8')
+        tmp.replace(COFFEE)
+
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write('%s %s\n' % (self.address_string(), fmt % a))
@@ -123,6 +211,8 @@ class H(BaseHTTPRequestHandler):
         p = self.path.split('?')[0]
         if p == '/api/status':
             return self.send(200, current_info())
+        if p == '/api/coffee':
+            return self.send(200, {'rows': coffee_rows(coffee_load(), time.time()), 'max': COFFEE_MAX})
         if p in ('/admin', '/admin/'):
             return self.send(200, (ROOT / 'admin.html').read_bytes(), TYPES['.html'])
         if p in ('/', '/index.html'):
@@ -147,6 +237,24 @@ class H(BaseHTTPRequestHandler):
             if p == '/api/apply':
                 apply_pending()
                 return self.send(200, {'ok': True, 'current': current_info()})
+            if p in ('/api/coffee/clear', '/api/coffee/remove'):
+                name = None
+                if p.endswith('remove'):
+                    n = int(self.headers.get('Content-Length', 0))
+                    name = json.loads(self.rfile.read(n)).get('name', '') if 0 < n <= 2048 else ''
+                    if not str(name).strip():
+                        raise ValueError('Name fehlt.')
+                coffee_remove(name)
+                return self.send(200, {'ok': True, 'rows': coffee_rows(coffee_load(), time.time())})
+            if p == '/api/coffee':
+                n = int(self.headers.get('Content-Length', 0))
+                if n <= 0 or n > 2048:
+                    raise ValueError('Ungültige Anfrage.')
+                body = json.loads(self.rfile.read(n))
+                rows, err = coffee_add(body.get('name', ''), body.get('cups'))
+                if err:
+                    return self.send(429, {'ok': False, **err})
+                return self.send(200, {'ok': True, 'rows': rows})
             if p == '/api/clear':
                 clear_all()
                 return self.send(200, {'ok': True, 'current': current_info()})

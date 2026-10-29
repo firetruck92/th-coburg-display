@@ -26,6 +26,9 @@ dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}dt{color:va
 <div id="msg" style="margin-top:12px"></div></section>
 <section class="card" id="prev" hidden><h2>Vorschau der neuen Datei</h2><div id="sum"></div>
 <div class="row"><button id="apply">Übernehmen &amp; auf Display anzeigen</button><button class="sec" id="cancel">Verwerfen</button></div></section>
+<section class="card"><h2>Kaffee-Leaderboard</h2>
+<div id="cof">Lade…</div>
+<div class="row"><button class="danger" id="cofclear">Leaderboard zurücksetzen</button></div></section>
 <section class="card"><h2>Alle Daten löschen</h2>
 <p style="margin:0 0 12px;color:var(--muted)">Leert Stundenplan und Wichtige Termine auf dem Display. Vorher wird automatisch eine Sicherung angelegt.</p>
 <button class="danger" id="clear">Alle Daten löschen</button></section>
@@ -55,6 +58,19 @@ $('#apply').onclick=async()=>{$('#apply').disabled=true;
  const j=await (await fetch('/api/apply',{method:'POST'})).json();$('#apply').disabled=false;
  if(!j.ok)return show(j.error,'err');
  $('#prev').hidden=true;$('#file').value='';show('Übernommen. Das Display aktualisiert sich innerhalb einer Minute.','ok');status()};
+const eh=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function cofDraw(rows){
+ rows=rows.slice().sort((a,b)=>b.v[2]-a.v[2]||b.v[1]-a.v[1]);
+ $('#cof').innerHTML=rows.length?`<table style="width:100%;border-collapse:collapse"><tr style="color:#666;text-align:left"><th>Name</th><th>Heute</th><th>Woche</th><th>Semester</th><th></th></tr>`+
+  rows.map(r=>`<tr style="border-top:1px solid #eee"><td>${eh(r.n)}</td><td>${r.v[0]}</td><td>${r.v[1]}</td><td>${r.v[2]}</td><td style="text-align:right"><button class="sec" style="padding:4px 12px" data-name="${eh(r.n)}">Entfernen</button></td></tr>`).join('')+`</table>`:'Noch keine Einträge.';
+ $('#cofclear').disabled=!rows.length}
+async function cofLoad(){cofDraw((await (await fetch('/api/coffee')).json()).rows)}
+async function cofPost(url,body){const j=await (await fetch(url,{method:'POST',body:body&&JSON.stringify(body)})).json();
+ if(!j.ok)return show(j.error,'err');cofDraw(j.rows)}
+$('#cof').onclick=e=>{const n=e.target.dataset&&e.target.dataset.name;
+ if(n&&confirm(`„${n}“ aus dem Leaderboard entfernen? Eine Sicherung wird angelegt.`))cofPost('/api/coffee/remove',{name:n})};
+$('#cofclear').onclick=()=>{if(confirm('Das gesamte Kaffee-Leaderboard zurücksetzen? Eine Sicherung wird angelegt.'))cofPost('/api/coffee/clear')};
+cofLoad();
 $('#clear').onclick=async()=>{
  if(!confirm('Wirklich alle Daten (Stundenplan und Termine) löschen? Eine Sicherung wird angelegt.'))return;
  $('#clear').disabled=true;
