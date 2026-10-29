@@ -4,7 +4,7 @@
     python3 server.py            # nur lokal erreichbar (http://localhost:8080)
     python3 server.py --lan      # auch aus dem WLAN erreichbar (Admin ohne Passwort!)
 """
-import argparse, json, shutil, subprocess, sys, tempfile, threading, time
+import argparse, json, re, shutil, subprocess, sys, tempfile, threading, time, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -193,6 +193,66 @@ def coffee_remove(name=None):
         tmp.replace(COFFEE)
 
 
+# Listen, die über die Admin-Seite gepflegt werden: Events und Profs Kontakt
+STORES = {
+    'events': {'file': DATA / 'events.json', 'req': ('d', 't'), 'fields': ('d', 'time', 't', 'o', 'g')},
+    'profs': {'file': DATA / 'profs.json', 'req': ('n', 'f'), 'fields': ('n', 'f', 'r', 'h', 'm', 'p')},
+}
+STORE_LOCK = threading.Lock()
+STORE_MAX_ITEMS = 500
+STORE_MAX_LEN = 200
+LABELS = {'d': 'Datum', 't': 'Titel', 'n': 'Name', 'f': 'Fakultät', 'time': 'Uhrzeit'}
+
+
+def store_load(kind):
+    try:
+        return json.loads(STORES[kind]['file'].read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+
+
+def store_write(kind, items):
+    DATA.mkdir(exist_ok=True)
+    f = STORES[kind]['file']
+    tmp = f.with_suffix('.tmp')
+    tmp.write_text(json.dumps(items, ensure_ascii=False, indent=1), encoding='utf-8')
+    tmp.replace(f)
+
+
+def store_save(kind, body):
+    """Legt einen Eintrag an oder ändert ihn (wenn body['id'] bekannt ist)."""
+    cfg = STORES[kind]
+    item = {k: ' '.join(str(body.get(k, '')).split())[:STORE_MAX_LEN] for k in cfg['fields']}
+    for k in cfg['req']:
+        if not item[k]:
+            raise ValueError(f'Pflichtfeld fehlt: {LABELS.get(k, k)}.')
+    if kind == 'events':
+        try:
+            time.strptime(item['d'], '%Y-%m-%d')
+        except ValueError:
+            raise ValueError('Ungültiges Datum.')
+        if item['time'] and not re.fullmatch(r'\d{1,2}:\d{2}', item['time']):
+            raise ValueError('Ungültige Uhrzeit (Format HH:MM).')
+    with STORE_LOCK:
+        items = store_load(kind)
+        old = next((i for i in items if i['id'] == body.get('id')), None)
+        if old:
+            old.update(item)
+        else:
+            if len(items) >= STORE_MAX_ITEMS:
+                raise ValueError('Zu viele Einträge.')
+            items.append({'id': uuid.uuid4().hex[:8], **item})
+        store_write(kind, items)
+        return items
+
+
+def store_delete(kind, item_id):
+    with STORE_LOCK:
+        items = [i for i in store_load(kind) if i['id'] != item_id]
+        store_write(kind, items)
+        return items
+
+
 class H(BaseHTTPRequestHandler):
     def log_message(self, fmt, *a):
         sys.stderr.write('%s %s\n' % (self.address_string(), fmt % a))
@@ -213,6 +273,8 @@ class H(BaseHTTPRequestHandler):
             return self.send(200, current_info())
         if p == '/api/coffee':
             return self.send(200, {'rows': coffee_rows(coffee_load(), time.time()), 'max': COFFEE_MAX})
+        if p in ('/api/events', '/api/profs'):
+            return self.send(200, {'items': store_load(p[5:])})
         if p in ('/admin', '/admin/'):
             return self.send(200, (ROOT / 'admin.html').read_bytes(), TYPES['.html'])
         if p in ('/', '/index.html'):
@@ -237,6 +299,15 @@ class H(BaseHTTPRequestHandler):
             if p == '/api/apply':
                 apply_pending()
                 return self.send(200, {'ok': True, 'current': current_info()})
+            m = re.fullmatch(r'/api/(events|profs)/(save|delete)', p)
+            if m:
+                n = int(self.headers.get('Content-Length', 0))
+                if n <= 0 or n > 4096:
+                    raise ValueError('Ungültige Anfrage.')
+                body = json.loads(self.rfile.read(n))
+                kind = m.group(1)
+                items = store_save(kind, body) if m.group(2) == 'save' else store_delete(kind, body.get('id'))
+                return self.send(200, {'ok': True, 'items': items})
             if p in ('/api/coffee/clear', '/api/coffee/remove'):
                 name = None
                 if p.endswith('remove'):

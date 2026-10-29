@@ -254,15 +254,8 @@ async function loadSchedule(){
   }catch(e){}
 }
 
-const EVENTS = [
-  {d:'2026-11-04',t:'Infoabend Auslandssemester',time:'18:00',o:'Hörsaal 1',g:'Studium'},
-  {d:'2026-11-07',t:'Campus-Lauf',time:'11:00',o:'Sportplatz',g:'Sport'},
-  {d:'2026-11-12',t:'Karrieretag mit 40 Unternehmen',time:'10:00',o:'Foyer Hauptgebäude',g:'Karriere'},
-  {d:'2026-11-20',t:'Coding Night',time:'18:00',o:'Labor Informatik',g:'Informatik'},
-  {d:'2026-11-26',t:'Vortrag: Gamification im Alltag',time:'17:00',o:'Hörsaal 2',g:'Vortrag'},
-  {d:'2026-12-03',t:'Winterfest auf dem Campus',time:'16:00',o:'Campusplatz',g:'Kultur'},
-  {d:'2026-12-10',t:'Filmabend im Hörsaal',time:'19:00',o:'Hörsaal 1',g:'Kultur'}
-];
+/* Events und Profs werden über die Admin-Seite gepflegt und vom Server geladen (/api/events, /api/profs). */
+let EVENTS=[], PROFS=[];
 const MENSA = [
   [ {c:'Hauptgericht',t:'Hähnchen-Geschnetzeltes mit Reis',g:['Geflügel'],p:'3,80'},
     {c:'Vegetarisch',t:'Spaghetti Napoli mit Parmesan',g:['vegetarisch'],p:'2,90'},
@@ -285,13 +278,6 @@ const MENSA = [
     {c:'Aktion',t:'Gemüsepfanne mit Tofu',g:['vegan'],p:'3,30'},
     {c:'Dessert',t:'Schokomousse',g:['vegetarisch'],p:'1,60'} ]
 ];
-const PROFS = [
-  {n:'Prof. Dr. Erika Mustermann',f:'Informatik',r:'I 1.05',h:'Di 10:00–11:00',m:'e.mustermann@hs-coburg.de',p:'+49 9561 317-101'},
-  {n:'Prof. Dr. Max Demo',f:'Informatik',r:'I 2.08',h:'Mi 13:00–14:00',m:'m.demo@hs-coburg.de',p:'+49 9561 317-102'},
-  {n:'Prof. Dr. Lena Platzhalter',f:'Technik',r:'T 0.21',h:'Do 09:00–10:00',m:'l.platzhalter@hs-coburg.de',p:'+49 9561 317-103'},
-  {n:'Prof. Dr. Paul Beispiel',f:'Wirtschaft',r:'W 1.14',h:'Mo 14:00–15:00',m:'p.beispiel@hs-coburg.de',p:'+49 9561 317-104'},
-  {n:'Prof. Dr. Clara Probe',f:'Design',r:'D 2.02',h:'Fr 10:00–11:00',m:'c.probe@hs-coburg.de',p:'+49 9561 317-105'}
-];
 /* Kaffee: Werte je Person = [heute, Woche, Semester]. Die Daten liegen auf dem Server (/api/coffee), der auch das Limit prüft. */
 const KMAX = 3;   /* max. Tassen pro Person und Stunde (wird vom Server durchgesetzt) */
 const KPER = ['Heute','Woche','Semester'];
@@ -312,7 +298,7 @@ const DICT = {
   'Wer trinkt die meisten Tassen?':'Who drinks the most cups?',
   'Tippen Sie auf ein Symbol, um Informationen anzuzeigen.':'Tap an icon to show information.',
   'Beispieldaten':'Sample data',
-  'Keine Termine':'No classes','Läuft jetzt':'In progress','Als Nächstes':'Up next','Raum':'Room','Sprechstunde':'Office hours',
+  'Keine Termine':'No classes','Keine Events geplant':'No events planned','Keine Einträge':'No entries','Läuft jetzt':'In progress','Als Nächstes':'Up next','Raum':'Room','Sprechstunde':'Office hours',
   'Heute':'Today','Morgen':'Tomorrow','Woche':'Week','Semester':'Semester','Alle':'All',
   'Studierende':'Students','Tassen':'cups','Getrunkene Tassen in dieser Wertung':'Cups in this ranking',
   /* Stundenplan */
@@ -385,7 +371,7 @@ const wdN = () => LI ? WDE : WD;
 const monN= () => LI ? MONE : MON;
 const uhr = () => LI ? '' : ' Uhr';
 const roomT = r => LI ? r.replace('Labor','Lab') : r;
-const hrs = h => LI ? WDE[WD.indexOf(h.slice(0,2))] + h.slice(2) : h;
+const hrs = h => (LI && WD.includes(h.slice(0,2))) ? WDE[WD.indexOf(h.slice(0,2))] + h.slice(2) : h;
 const cupsT = n => LI ? (n===1?'cup':'cups') : (n===1?'Tasse':'Tassen');
 const ord = n => n + (['th','st','nd','rd'][(n%10<4 && (n<11||n>13)) ? n%10 : 0]);
 const priceT = p => LI ? p.replace(',','.') : p;
@@ -459,9 +445,11 @@ function vPlan(){
 }
 function vEvents(){
   const today=midnight(new Date());
-  return EVENTS.filter(e=>parse(e.d)>=today).map(e=>{
-    const d=parse(e.d);
-    return `<div class="row"><div class="badge"><b>${p2(d.getDate())}</b><span>${monN()[d.getMonth()]}</span></div><div class="info"><h3>${esc(t(e.t))}</h3><p>${e.time}${uhr()} · ${esc(t(e.o))}</p><span class="tag">${esc(t(e.g))}</span></div></div>`;
+  const list=EVENTS.filter(e=>parse(e.d)>=today).sort((a,b)=>(a.d+(a.time||'')).localeCompare(b.d+(b.time||'')));
+  if(!list.length) return `<div class="empty">${t('Keine Events geplant')}</div>`;
+  return list.map(e=>{
+    const d=parse(e.d), line=[e.time?e.time+uhr():'',e.o?esc(t(e.o)):''].filter(Boolean).join(' · ');
+    return `<div class="row"><div class="badge"><b>${p2(d.getDate())}</b><span>${monN()[d.getMonth()]}</span></div><div class="info"><h3>${esc(t(e.t))}</h3>${line?`<p>${line}</p>`:''}${e.g?`<span class="tag">${esc(t(e.g))}</span>`:''}</div></div>`;
   }).join('');
 }
 function vTermine(){
@@ -493,9 +481,14 @@ function vMensa(){
   return `<div class="chips">${chips}</div>${dishes}`;
 }
 function vProfs(){
-  const fs=['Alle','Informatik','Wirtschaft','Design','Technik'];
-  const chips=fs.map(f=>`<button class="chip ${f===S.fak?'on':''}" data-act="fak" data-v="${f}">${t(f)}</button>`).join('');
-  const list=PROFS.filter(p=>S.fak==='Alle'||p.f===S.fak).map(p=>`<div class="prof"><div class="av">${initials(p.n)}</div><div style="min-width:0"><h3>${esc(p.n)}</h3><div class="f"><b>${t(p.f)}</b> · ${t('Raum')} ${p.r}</div><p>${t('Sprechstunde')} ${hrs(p.h)}${uhr()}</p><p>${esc(p.m)}</p><p>${p.p}</p></div></div>`).join('');
+  if(!PROFS.length) return `<div class="empty">${t('Keine Einträge')}</div>`;
+  const fs=['Alle',...new Set(PROFS.map(p=>p.f))];
+  const fak=fs.includes(S.fak)?S.fak:'Alle';
+  const chips=fs.map(f=>`<button class="chip ${f===fak?'on':''}" data-act="fak" data-v="${esc(f)}">${esc(t(f))}</button>`).join('');
+  const list=PROFS.filter(p=>fak==='Alle'||p.f===fak).sort((a,b)=>a.n.localeCompare(b.n,'de')).map(p=>{
+    const place=[`<b>${esc(t(p.f))}</b>`,p.r?`${t('Raum')} ${esc(p.r)}`:''].filter(Boolean).join(' · ');
+    return `<div class="prof"><div class="av">${esc(initials(p.n))}</div><div style="min-width:0"><h3>${esc(p.n)}</h3><div class="f">${place}</div>${p.h?`<p>${t('Sprechstunde')} ${esc(hrs(p.h))}${uhr()}</p>`:''}${p.m?`<p>${esc(p.m)}</p>`:''}${p.p?`<p>${esc(p.p)}</p>`:''}</div></div>`;
+  }).join('');
   return `<div class="chips">${chips}</div>${list}`;
 }
 function vKaffee(){
@@ -526,6 +519,16 @@ const TABS=[
 ];
 
 /* ===== Kaffee: Speicher und Eintrag ===== */
+async function loadList(kind,redraw){
+  if(!/^https?:/.test(location.protocol)) return;
+  try{
+    const r=await fetch(`api/${kind}?`+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const items=(await r.json()).items;
+    if(kind==='events') EVENTS=items; else PROFS=items;
+    if(redraw&&S.tab===kind&&!S.modal) drawPanel(false);
+  }catch(e){}
+}
 let KROWS=[];
 async function loadK(redraw){
   if(!/^https?:/.test(location.protocol)) return;
@@ -594,7 +597,7 @@ function sync(){
   LI = S.lang==='en' ? 1 : 0;
   document.documentElement.lang = LI ? 'en' : 'de';
   document.getElementById('ftl').textContent = t('Tippen Sie auf ein Symbol, um Informationen anzuzeigen.');
-  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : S.tab==='kaffee' ? '' : t('Beispieldaten');
+  document.getElementById('ftr').textContent = ((S.tab==='plan'||S.tab==='termine') && SCH && SCH.meta) ? `${t('Stand')}: ${dmy(new Date(SCH.meta.generated))}` : S.tab==='mensa' ? t('Beispieldaten') : '';
   document.querySelectorAll('.lang button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.lang));
   tick();
 }
@@ -611,7 +614,7 @@ document.addEventListener('click',e=>{
   const b=e.target.closest('[data-act]'); if(!b) return;
   const a=b.dataset.act, v=b.dataset.v;
   if(a==='lang'){ if(S.lang===v) return; S.lang=v; document.getElementById('toast').hidden=true; drawAll(false); return; }
-  if(a==='tab'){ if(S.tab===v) return; S.tab=v; drawAll(true); if(v==='kaffee') loadK(true); return; }
+  if(a==='tab'){ if(S.tab===v) return; S.tab=v; drawAll(true); if(v==='kaffee') loadK(true); else if(v==='events'||v==='profs') loadList(v,true); return; }
   if(a==='kopen'){ S.modal={name:'',cups:1}; document.getElementById('toast').hidden=true; drawModal(); return; }
   if(a==='kclose'){ S.modal=null; drawModal(); return; }
   if(S.modal && a.charAt(0)==='k'){
@@ -650,7 +653,7 @@ function tick(){
   document.getElementById('dat').textContent=n.toLocaleDateString(LI?'en-GB':'de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
 }
 setInterval(tick,1000);
-setInterval(()=>loadK(true),60000);
+setInterval(()=>{loadK(true);loadList('events',true);loadList('profs',true)},60000);
 setInterval(()=>{ if(S.tab==='plan'){const y=document.querySelector('.pbody'),s=y?y.scrollTop:0;drawPanel(false);const z=document.querySelector('.pbody');if(z)z.scrollTop=s;} },60000);
 
 /* Skalierung auf die Fenstergröße (auf dem 1080x1920-Display 1:1) */
@@ -667,7 +670,7 @@ function bump(){clearTimeout(idle);idle=setTimeout(()=>{S=fresh();drawAll(true)}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,bump,{passive:true}));
 bump();
 
-loadK(true);
+loadK(true); loadList('events',true); loadList('profs',true);
 drawAll(false);
 loadSchedule();
 setInterval(loadSchedule, 60*1000);
