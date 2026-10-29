@@ -4,47 +4,58 @@ Touch-Kiosk-Anzeige für den Campus der Hochschule Coburg.
 Zielgerät: ET 4363L, Auflösung 1080 × 1920 (Hochformat).
 
 ## Inhalt
-Eine einzelne Datei, `index.html` (HTML, CSS und JavaScript, keine Bibliotheken).
-Schrift (Roboto) und Logo sind eingebettet, die Seite funktioniert ohne Internet.
-Links sechs Tabs, rechts das aktive Fenster:
+- `index.html` – die Anzeige (HTML, CSS, JavaScript; Roboto und Logo eingebettet, keine Bibliotheken)
+- `schedule.js` / `schedule.json` – Stundenplan und Wichtige Termine (aus der Excel-Zeitplanung)
+- `server.py` + `admin.html` – lokaler Server mit Admin-Seite zum Hochladen der Excel-Datei
+- `tools/excel_to_json.py` – Konverter Excel → `schedule.json` / `schedule.js`
 
-- Stundenplan (echte Daten aus der Excel-Zeitplanung; Auswahl des Semesters 1/3/5/7)
-- Events
-- Wichtige Termine
-- Mensaplan
-- Profs Kontakt Informationen
-- Kaffee Leaderboard (mit Dialog zum Eintragen neuer Tassen)
+Tabs: Stundenplan, Events, Wichtige Termine, Mensaplan, Profs Kontakt Informationen, Kaffee Leaderboard.
+Oben rechts Umschalter Deutsch/Englisch. Nach 2 Minuten ohne Berührung springt die Anzeige zurück
+auf den Stundenplan (Semester 1, Deutsch).
 
-Oben rechts lässt sich zwischen Deutsch und Englisch umschalten.
+## Nur ansehen
+`index.html` im Browser öffnen oder über GitHub Pages. Der Stundenplan kommt aus `schedule.js`
+(funktioniert auch ohne Internet).
 
-## Starten
-Datei im Browser öffnen. Für den Kioskbetrieb zum Beispiel:
+## Raspberry Pi (mit Admin-Upload)
+    sudo apt install python3-openpyxl
+    python3 server.py
 
-    chrome --kiosk index.html
+- Kiosk: http://localhost:8080/
+- Admin: http://localhost:8080/admin (Excel hochladen, Vorschau prüfen, "Übernehmen")
 
-Nach 2 Minuten ohne Berührung springt die Anzeige zurück auf den Stundenplan (Semester 1, Deutsch).
+Das Display lädt `schedule.json` jede Minute neu. Die letzten 10 Versionen liegen in `data/backup/`.
 
-## Daten
-Stundenplan und Wichtige Termine kommen aus `schedule.js` / `schedule.json`
-(erzeugt aus der Excel-Zeitplanung). Events, Mensaplan, Profs und Kaffee sind
-weiterhin Beispieldaten im `<script>`-Block von `index.html`.
-Die englischen Texte stehen im Wörterbuch `DICT`.
+### Zugriff aus dem WLAN
+Standardmäßig nur vom Pi selbst erreichbar. Mit `python3 server.py --lan` auch von anderen
+Geräten (`http://<IP-des-Pi>:8080/admin`). Die Admin-Seite hat KEIN Passwort, also nur in
+vertrauenswürdigen Netzen verwenden.
 
-### Stundenplan aktualisieren
+### Autostart
+`/etc/systemd/system/kiosk-server.service`:
 
+    [Unit]
+    Description=Kiosk Server
+    After=network.target
+    [Service]
+    WorkingDirectory=/home/pi/th-coburg-display
+    ExecStart=/usr/bin/python3 /home/pi/th-coburg-display/server.py
+    Restart=always
+    User=pi
+    [Install]
+    WantedBy=multi-user.target
+
+    sudo systemctl enable --now kiosk-server
+
+Browser im Kiosk-Modus (z. B. `~/.config/autostart/kiosk.desktop`):
+
+    chromium-browser --kiosk --noerrdialogs --disable-infobars http://localhost:8080/
+
+## Stundenplan ohne Server aktualisieren
     python3 tools/excel_to_json.py Zeitplanung.xlsx .
 
-Benötigt `openpyxl`. Erzeugt `schedule.json` und `schedule.js` (rote Schrift = vorläufig,
-Teams-Links werden nicht übernommen). Offline wird `schedule.js` genutzt; über http(s) lädt
-die Seite `schedule.json` alle 30 Minuten neu.
+Rote Schrift in Excel = vorläufig, Teams-Links werden nicht übernommen.
 
-## Kaffee Leaderboard
-Neue Einträge werden im Browser des Displays gespeichert (localStorage) und sind auf
-anderen Geräten nicht sichtbar. "Heute" und "Woche" beginnen automatisch neu.
-Für ein gemeinsames Leaderboard wird ein kleiner Server benötigt.
-
-## Kiosk-Server mit Admin-Upload (Raspberry Pi)
-Im Ordner `kiosk/` liegt eine lokale Variante mit kleinem Python-Server und Admin-Seite
-(`/admin`): Excel hochladen, Vorschau prüfen, übernehmen. Das Display aktualisiert sich
-innerhalb einer Minute. Anleitung in `kiosk/README.md`.
-
+## Daten
+Stundenplan und Wichtige Termine sind echt. Events, Mensaplan, Profs und Kaffee sind Beispieldaten
+im `<script>`-Block von `index.html`. Das Kaffee Leaderboard speichert im Browser (localStorage).

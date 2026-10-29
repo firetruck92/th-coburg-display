@@ -55,14 +55,14 @@ def apply_pending():
     BACKUP.mkdir(parents=True, exist_ok=True)
     stamp = time.strftime('%Y%m%d-%H%M%S')
     for name in ('schedule.json', 'schedule.js'):
-        cur = DATA / name
+        cur = ROOT / name
         if cur.exists():
             shutil.copy2(cur, BACKUP / f'{stamp}-{name}')
     # atomar ersetzen, damit der Kiosk nie eine halbe Datei liest
     for name in ('schedule.js', 'schedule.json'):
-        tmp = DATA / (name + '.tmp')
+        tmp = ROOT / (name + '.tmp')
         shutil.copy2(PENDING / name, tmp)
-        tmp.replace(DATA / name)
+        tmp.replace(ROOT / name)
     shutil.copy2(PENDING / 'upload.xlsx', DATA / 'zeitplanung.xlsx')
     shutil.rmtree(PENDING, ignore_errors=True)
     old = sorted(BACKUP.glob('*-schedule.json'))
@@ -72,7 +72,7 @@ def apply_pending():
 
 
 def current_info():
-    f = DATA / 'schedule.json'
+    f = ROOT / 'schedule.json'
     if not f.exists():
         return {'exists': False}
     js = json.loads(f.read_text(encoding='utf-8'))
@@ -104,7 +104,7 @@ class H(BaseHTTPRequestHandler):
         if p in ('/', '/index.html'):
             f = ROOT / 'index.html'
         elif p in ('/schedule.json', '/schedule.js'):
-            f = DATA / p[1:]
+            f = ROOT / p[1:]
         else:
             return self.send(404, {'error': 'not found'})
         if not f.exists():

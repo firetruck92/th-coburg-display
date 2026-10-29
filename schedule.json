@@ -1,8 +1,8 @@
 {
  "meta": {
-  "source": "zeitplan.xlsx",
+  "source": "upload.xlsx",
   "sheet": "WiSe26_27",
-  "generated": "2026-10-29T13:45:17",
+  "generated": "2026-10-29T14:14:27",
   "semesters": [
    1,
    3,
