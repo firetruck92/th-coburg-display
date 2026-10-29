@@ -205,6 +205,79 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
 .toast{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:252px;z-index:60;max-width:900px;padding:24px 44px;border-radius:44px;background:#242220;color:#fff;font-size:32px;font-weight:500;text-align:center;animation:in .26s ease both}
 :focus-visible{outline:6px solid var(--orange);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.anim{animation:none}.tab,.chip,.lang button{transition:none}}
+/* Ruhebildschirm: Uhr, wechselnde Infokarte, Hinweis zum Berühren */
+#attract{position:absolute;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;padding:56px 60px 64px;background:var(--grad);color:#fff;cursor:pointer}
+#attract[hidden]{display:none}
+#alogo{height:112px;width:auto;margin-bottom:34px}
+.aclk{font-size:250px;line-height:1;font-weight:900;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.adat{margin-top:10px;font-size:54px;font-weight:500}
+.acard{flex:1;min-height:0;width:100%;margin:44px 0 22px;background:#fff;color:var(--ink);border-radius:52px;padding:48px 52px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.28);display:flex}
+.aslide{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:safe center;opacity:1;transition:opacity .45s}
+.aslide.out{opacity:0}
+.alab{font-size:34px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--red);margin-bottom:24px}
+.aimg{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:30px;margin-bottom:30px;background:#e6e1de}
+.at{font-size:62px;line-height:1.12;font-weight:800;overflow-wrap:anywhere;hyphens:auto}
+.asub{margin-top:14px;font-size:38px;color:var(--muted);font-weight:500}
+.aprice{margin-top:18px;font-size:92px;line-height:1;font-weight:900;color:var(--red)}
+.aprice small{font-size:32px;font-weight:500;color:var(--muted);margin-left:14px}
+.atags .tag{font-size:30px;height:50px;border-radius:25px;padding:0 22px;margin:16px 12px 0 0}
+.abadge{display:flex;gap:34px;align-items:center}
+.abadge .bd{flex:none;width:200px;text-align:center;border-radius:36px;background:var(--grad);color:#fff;padding:26px 0}
+.abadge .bd b{display:block;font-size:110px;line-height:1;font-weight:900}
+.abadge .bd span{display:block;margin-top:6px;font-size:40px;font-weight:700;text-transform:uppercase}
+.alist{display:flex;flex-direction:column;gap:6px}
+.alist .it{display:flex;gap:28px;align-items:flex-start;padding:18px 0;border-bottom:2px solid var(--line)}
+.alist .it:last-child{border-bottom:0}
+.alist .tm{flex:none;width:150px;font-size:44px;font-weight:800;color:var(--red);font-variant-numeric:tabular-nums}
+.alist .tm small{display:block;font-size:28px;font-weight:500;color:var(--muted)}
+.alist .nm{flex:1;min-width:0;font-size:40px;line-height:1.15;font-weight:700}
+.alist .nm small{display:block;margin-top:6px;font-size:28px;font-weight:500;color:var(--muted)}
+.alist .when{flex:none;font-size:32px;font-weight:700;color:var(--red);text-align:right}
+.alist{gap:18px}
+.alist.lg{gap:0;justify-content:center}
+.alist.lg .it{padding:30px 0;gap:34px;align-items:center}
+.alist.lg .tm{width:210px;font-size:58px}
+.alist.lg .tm .wh{margin-top:4px;font-size:30px;font-weight:700;color:var(--red)}
+.alist.lg .nm{font-size:46px;line-height:1.14;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.alist.lg .when{font-size:38px}
+.aev{display:flex;align-items:center;gap:36px;padding:26px 0;border-bottom:2px solid var(--line)}
+.aev:last-child{border-bottom:0}
+.aev .bd{flex:none;width:170px;text-align:center;border-radius:30px;background:var(--grad);color:#fff;padding:20px 0}
+.aev .bd b{display:block;font-size:84px;line-height:1;font-weight:900}
+.aev .bd span{display:block;margin-top:4px;font-size:32px;font-weight:700;text-transform:uppercase}
+.aev .ev{flex:1;min-width:0}
+.aev .at{font-size:46px;line-height:1.1;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.aev .asub{margin-top:8px;font-size:32px}
+.aev .asub.wh{font-weight:700;color:var(--red)}
+.aev .bd{width:150px;padding:16px 0}
+.aev .bd b{font-size:76px}
+.alist.lg .apod{padding:24px 0}
+.alist.lg .apod .rk{width:100px;height:100px;font-size:58px}
+.alist.lg .apod .nm{font-size:68px;-webkit-line-clamp:1}
+.alist.lg .apod .ct{font-size:62px}
+.asem{display:flex;align-items:center;height:60px;padding:0 24px;border-radius:30px;background:var(--grad);color:#fff;font-size:32px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}
+.asec .it{padding:10px 8px;gap:24px}
+.asec .tm{width:120px;font-size:36px}.asec .tm small{font-size:24px}
+.asec .nm{font-size:34px}.asec .nm small{font-size:24px;margin-top:2px}
+.asec .amore{margin:8px 8px 0;font-size:28px}
+.amore{margin-top:14px;font-size:34px;color:var(--muted);font-weight:500}
+.apod{display:flex;align-items:center;gap:30px;padding:20px 0;border-bottom:2px solid var(--line)}
+.apod:last-child{border-bottom:0}
+.apod .rk{flex:none;width:76px;height:76px;border-radius:50%;background:var(--grad);color:#fff;font-size:44px;font-weight:900;display:flex;align-items:center;justify-content:center}
+.apod .nm{flex:1;font-size:54px;font-weight:800}
+.apod .ct{font-size:54px;font-weight:900;color:var(--red)}
+.adots{display:flex;gap:16px;margin-bottom:30px}
+.adots i{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,.4);transition:background .3s,transform .3s}
+.adots i.on{background:#fff;transform:scale(1.35)}
+.ahint{display:flex;align-items:center;gap:34px}
+.atap{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center}
+.atap svg{width:84px;height:84px;position:relative;animation:atap 1.8s ease-in-out infinite}
+.atap i{position:absolute;inset:14px;border:4px solid #fff;border-radius:50%;opacity:0;animation:apulse 1.8s ease-out infinite}
+.atap i+i{animation-delay:.9s}
+.atx b{display:block;font-size:56px;line-height:1.1;font-weight:900;text-transform:uppercase;letter-spacing:.03em}
+.atx span{display:block;margin-top:4px;font-size:36px;font-weight:500;opacity:.9}
+@keyframes atap{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+@keyframes apulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.5);opacity:0}}
 </style>
 
 <div id="vp">
@@ -231,6 +304,17 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
     </footer>
     <div class="mback" id="modal" hidden></div>
     <div class="toast" id="toast" hidden role="status"></div>
+    <div id="attract" hidden aria-label="Ruhebildschirm">
+      <img id="alogo" alt="Hochschule Coburg">
+      <div class="aclk" id="aclk">--:--</div>
+      <div class="adat" id="adat"></div>
+      <div class="acard"><div class="aslide" id="aslide"></div></div>
+      <div class="adots" id="adots"></div>
+      <div class="ahint">
+        <div class="atap" aria-hidden="true"><i></i><i></i><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 14a8 8 0 0 1-8 8"/><path d="M18 11v-1a2 2 0 0 0-2-2a2 2 0 0 0-2 2"/><path d="M14 10V9a2 2 0 0 0-2-2a2 2 0 0 0-2 2v1"/><path d="M10 9.5V4a2 2 0 0 0-2-2a2 2 0 0 0-2 2v10"/><path d="M18 11a2 2 0 1 1 4 0v3a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg></div>
+        <div class="atx"><b>Zum Starten berühren</b><span>Touch to start</span></div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -660,7 +744,10 @@ document.addEventListener('contextmenu',e=>e.preventDefault());
 function tick(){
   const n=new Date();
   document.getElementById('clk').textContent=p2(n.getHours())+':'+p2(n.getMinutes());
-  document.getElementById('dat').textContent=n.toLocaleDateString(LI?'en-GB':'de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const ds=n.toLocaleDateString(LI?'en-GB':'de-DE',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  document.getElementById('dat').textContent=ds;
+  document.getElementById('aclk').textContent=p2(n.getHours())+':'+p2(n.getMinutes());
+  document.getElementById('adat').textContent=ds;
 }
 setInterval(tick,1000);
 setInterval(()=>{loadK(true);loadList('events',true);loadList('profs',true);loadMensa(true)},60000);
@@ -674,9 +761,92 @@ function fit(){
 }
 addEventListener('resize',fit); fit();
 
-/* Kiosk: nach 2 Minuten ohne Berührung zurück zum Start (und zur deutschen Sprache) */
+/* ===== Ruhebildschirm: nach 1 Minute ohne Berührung Uhr + wechselnde Infokarten (alle 20 s) ===== */
+const ATTRACT_IDLE=60000, ATTRACT_EVERY=20000;
+const AT=document.getElementById('attract'), ASLIDE=document.getElementById('aslide');
+const rnd=a=>a[Math.floor(Math.random()*a.length)];
+const dayLabel=(d,today)=>d===today?'heute':`${wdOf(d)} ${dm(parse(d))}`;
+function aMensa(){
+  const days=MENSA.days||{}, today=ymd(new Date());
+  const d=days[today]?today:Object.keys(days).filter(x=>x>today).sort()[0];
+  if(!d) return null;
+  const all=days[d].filter(x=>['main','vegan','night','pizza'].includes(x.c)), pool=all.filter(x=>x.i).length?all.filter(x=>x.i):all;
+  if(!pool.length) return null;
+  const x=rnd(pool), tags=x.s.filter(n=>MSYM[n]).map(n=>`<span class="tag ${(n===53||n===54)?'v':''}">${MSYM[n][0]}</span>`).join('');
+  return `<div class="alab">${d===today?'Heute in der Mensa':`Mensa · ${dayLabel(d,today)}`}</div>`
+    +(x.i?`<img class="aimg" src="mensa-img/${esc(x.i)}" alt="" onerror="this.remove()">`:'')
+    +`<div class="at">${esc(x.t)}</div>`+(x.p!=null?`<div class="aprice">${priceT(x.p)} €<small>Studierende</small></div>`:'')
+    +(tags?`<div class="atags">${tags}</div>`:'');
+}
+function aEvent(){
+  const today=midnight(new Date()), list=EVENTS.filter(e=>parse(e.d)>=today).sort((a,b)=>(a.d+(a.time||'')).localeCompare(b.d+(b.time||''))).slice(0,4);
+  if(!list.length) return null;
+  const rows=list.map(e=>{
+    const d=parse(e.d), line=[e.time?e.time+' Uhr':'',e.o||'',e.g||''].filter(Boolean).join(' · ');
+    return `<div class="aev"><div class="bd"><b>${p2(d.getDate())}</b><span>${MON[d.getMonth()]}</span></div><div class="ev"><div class="at">${esc(e.t)}</div>${line?`<div class="asub">${esc(line)}</div>`:''}</div></div>`;
+  }).join('');
+  return `<div class="alab">Events auf dem Campus</div><div class="alist lg">${rows}</div>`;
+}
+function aPlan(){
+  if(!SCH) return null;
+  const today=ymd(new Date()), d=[...new Set(SCH.lessons.map(l=>l.date))].sort().find(x=>x>=today);
+  if(!d) return null;
+  const day=SCH.lessons.filter(l=>l.date===d), MAXROWS=3;
+  const secs=semList().map(sem=>{
+    const list=day.filter(l=>l.sems.includes(sem)).sort((a,b)=>mins(a.start)-mins(b.start)), shown=list.slice(0,MAXROWS);
+    const rows=shown.map(l=>{
+      const room=l.online?'Online':l.room?`Raum ${l.room.replace(/tba|tbd/gi,'folgt')}`:(l.tbd?'Raum folgt':'');
+      return `<div class="it"><div class="tm">${l.start}<small>${l.end}</small></div><div class="nm">${esc(l.title)}${room?`<small>${esc(room)}</small>`:''}</div></div>`;
+    }).join('');
+    return `<div class="asec"><div class="asem">${sem}. Semester</div>${rows||'<div class="amore">Keine Termine</div>'}`
+      +(list.length>shown.length?`<div class="amore">+ ${list.length-shown.length} weitere</div>`:'')+`</div>`;
+  }).join('');
+  return `<div class="alab">Stundenplan · ${d===today?'heute':dayLabel(d,today)}</div><div class="alist">${secs}</div>`;
+}
+function aTermin(){
+  if(!SCH||!SCH.events) return null;
+  const today=ymd(new Date()), t0=midnight(new Date());
+  const list=SCH.events.filter(e=>e.date>=today).sort((a,b)=>a.date.localeCompare(b.date)).slice(0,4);
+  if(!list.length) return null;
+  const rows=list.map(e=>{
+    const diff=Math.round((parse(e.date)-t0)/864e5), w=diff===0?'Heute':diff===1?'Morgen':`in ${diff} Tagen`;
+    const d=parse(e.date);
+    return `<div class="aev"><div class="bd"><b>${p2(d.getDate())}</b><span>${MON[d.getMonth()]}</span></div><div class="ev"><div class="at">${esc(e.title)}</div><div class="asub wh">${w}</div></div></div>`;
+  }).join('');
+  return `<div class="alab">Wichtige Termine</div><div class="alist lg">${rows}</div>`;
+}
+function aKaffee(){
+  for(const [i,lb] of [[0,'heute'],[1,'diese Woche'],[2,'im Semester']]){
+    const top=KROWS.filter(r=>r.v[i]>0).sort((a,b)=>b.v[i]-a.v[i]).slice(0,5);
+    if(!top.length) continue;
+    return `<div class="alab">Kaffee-Leaderboard · ${lb}</div><div class="alist lg">`+top.map((r,k)=>`<div class="apod"><div class="rk">${k+1}</div><div class="nm">${esc(r.n)}</div><div class="ct">${r.v[i]} ${cupsT(r.v[i])}</div></div>`).join('')+`</div>`;
+  }
+  return null;
+}
+const ASLIDES=[aMensa,aEvent,aPlan,aTermin,aKaffee];
+let atTimer=null, atIdx=-1;
+function atNext(first){
+  let html=null, k=atIdx;
+  for(let n=0;n<ASLIDES.length&&!html;n++){ k=(k+1)%ASLIDES.length; html=ASLIDES[k](); }
+  if(!html) return;
+  const apply=()=>{ ASLIDE.innerHTML=html; atIdx=k; document.querySelectorAll('#adots i').forEach((d,i)=>d.classList.toggle('on',i===k)); ASLIDE.classList.remove('out'); };
+  if(first){ apply(); return; }
+  ASLIDE.classList.add('out'); setTimeout(apply,450);
+}
+function showAttract(){
+  if(!AT.hidden) return;
+  S=fresh(); drawAll(false); document.getElementById('toast').hidden=true;
+  document.getElementById('alogo').src=document.getElementById('logo').src;
+  document.getElementById('adots').innerHTML=ASLIDES.map(()=>'<i></i>').join('');
+  AT.hidden=false; tick(); atIdx=-1; atNext(true);
+  atTimer=setInterval(()=>atNext(false),ATTRACT_EVERY);
+}
+function hideAttract(){ AT.hidden=true; clearInterval(atTimer); bump(); }
+AT.addEventListener('click',hideAttract);   /* erst beim click (nicht pointerdown), damit die Berührung nicht auf ein Element darunter durchschlägt */
+
+/* Kiosk: nach 1 Minute ohne Berührung Ruhebildschirm (dabei zurück zum Start und zur deutschen Sprache) */
 let idle;
-function bump(){clearTimeout(idle);idle=setTimeout(()=>{S=fresh();drawAll(true)},120000)}
+function bump(){clearTimeout(idle);idle=setTimeout(showAttract,ATTRACT_IDLE)}
 ['pointerdown','touchstart','keydown'].forEach(ev=>addEventListener(ev,bump,{passive:true}));
 bump();
 
