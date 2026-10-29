@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kiosk-Admin</title>
+<style>
+:root{--r:#e2231a;--o:#ff6a00;--bg:#e8e8e8;--ink:#222;--muted:#666}
+*{box-sizing:border-box}body{margin:0;font:16px/1.5 Roboto,system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{background:linear-gradient(90deg,var(--r),var(--o));color:#fff;padding:20px 24px}
+header h1{margin:0;font-size:22px;text-transform:uppercase;letter-spacing:.5px}
+main{max-width:720px;margin:24px auto;padding:0 16px;display:grid;gap:16px}
+.card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 6px #0002}
+h2{margin:0 0 8px;font-size:16px;text-transform:uppercase;color:var(--muted);letter-spacing:.5px}
+.drop{border:2px dashed #bbb;border-radius:12px;padding:28px;text-align:center;cursor:pointer;color:var(--muted)}
+.drop.over{border-color:var(--r);background:#fff5f3}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:12px 22px;cursor:pointer;background:linear-gradient(90deg,var(--r),var(--o));color:#fff}
+button.sec{background:#eee;color:var(--ink)}button:disabled{opacity:.4;cursor:default}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 16px;margin:0}dt{color:var(--muted)}dd{margin:0;font-weight:700}
+.err{background:#fdecea;color:#a1180f;border-radius:10px;padding:12px}.ok{background:#e8f6ea;color:#1b6b2a;border-radius:10px;padding:12px}
+.row{display:flex;gap:10px;margin-top:14px}[hidden]{display:none!important}
+</style></head><body>
+<header><h1>Kiosk-Admin · Stundenplan</h1></header>
+<main>
+<section class="card"><h2>Aktuell auf dem Display</h2><div id="cur">Lade…</div></section>
+<section class="card"><h2>Neue Excel-Datei hochladen</h2>
+<div class="drop" id="drop">Excel-Datei (.xlsx) hierher ziehen oder tippen zum Auswählen
+<input type="file" id="file" accept=".xlsx" hidden></div>
+<div id="msg" style="margin-top:12px"></div></section>
+<section class="card" id="prev" hidden><h2>Vorschau der neuen Datei</h2><div id="sum"></div>
+<div class="row"><button id="apply">Übernehmen &amp; auf Display anzeigen</button><button class="sec" id="cancel">Verwerfen</button></div></section>
+</main>
+<script>
+const $=s=>document.querySelector(s);
+const d=iso=>iso?iso.split('-').reverse().join('.'):'–';
+function rows(s){return `<dl><dt>Veranstaltungen</dt><dd>${s.lessons}</dd><dt>Wichtige Termine</dt><dd>${s.events} Termine, ${s.notes} Hinweise</dd>
+<dt>Zeitraum</dt><dd>${d(s.first)} – ${d(s.last)}</dd><dt>Semester</dt><dd>${(s.semesters||[]).join(', ')}</dd>
+<dt>Vorläufig (rot)</dt><dd>${s.provisional}</dd><dt>Raum offen (tbd)</dt><dd>${s.tbd}</dd></dl>`}
+async function status(){const s=await (await fetch('/api/status')).json();
+ $('#cur').innerHTML=s.exists?rows(s)+`<p style="color:#666;margin:10px 0 0">Zuletzt geändert: ${s.updated}</p>`:'Noch keine Daten.'}
+function show(t,c){$('#msg').innerHTML=t?`<div class="${c}">${t}</div>`:''}
+async function upload(f){
+ show('','');$('#prev').hidden=true;
+ if(!f)return; if(!/\.xlsx$/i.test(f.name))return show('Bitte eine .xlsx-Datei wählen.','err');
+ const r=await fetch('/api/preview',{method:'POST',body:f}); const j=await r.json();
+ if(!j.ok)return show(j.error,'err');
+ $('#sum').innerHTML=rows(j.summary)+`<p style="color:#666">Datei: ${f.name}</p>`; $('#prev').hidden=false}
+$('#drop').onclick=()=>$('#file').click();
+$('#file').onchange=e=>upload(e.target.files[0]);
+['dragover','dragenter'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.add('over')}));
+['dragleave','drop'].forEach(ev=>$('#drop').addEventListener(ev,e=>{e.preventDefault();$('#drop').classList.remove('over')}));
+$('#drop').addEventListener('drop',e=>upload(e.dataTransfer.files[0]));
+$('#cancel').onclick=()=>{$('#prev').hidden=true;$('#file').value=''};
+$('#apply').onclick=async()=>{$('#apply').disabled=true;
+ const j=await (await fetch('/api/apply',{method:'POST'})).json();$('#apply').disabled=false;
+ if(!j.ok)return show(j.error,'err');
+ $('#prev').hidden=true;$('#file').value='';show('Übernommen. Das Display aktualisiert sich innerhalb einer Minute.','ok');status()};
+status();
+</script></body></html>

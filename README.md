@@ -42,3 +42,9 @@ die Seite `schedule.json` alle 30 Minuten neu.
 Neue Einträge werden im Browser des Displays gespeichert (localStorage) und sind auf
 anderen Geräten nicht sichtbar. "Heute" und "Woche" beginnen automatisch neu.
 Für ein gemeinsames Leaderboard wird ein kleiner Server benötigt.
+
+## Kiosk-Server mit Admin-Upload (Raspberry Pi)
+Im Ordner `kiosk/` liegt eine lokale Variante mit kleinem Python-Server und Admin-Seite
+(`/admin`): Excel hochladen, Vorschau prüfen, übernehmen. Das Display aktualisiert sich
+innerhalb einer Minute. Anleitung in `kiosk/README.md`.
+
