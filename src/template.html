@@ -202,6 +202,10 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
 .toast{position:absolute;left:0;right:0;margin:0 auto;width:max-content;bottom:252px;z-index:60;max-width:900px;padding:24px 44px;border-radius:44px;background:#242220;color:#fff;font-size:32px;font-weight:500;text-align:center;animation:in .26s ease both}
 :focus-visible{outline:6px solid var(--orange);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.anim{animation:none}.tab,.chip,.lang button{transition:none}}
+/* Easter Egg: Foto im Vollbild */
+#egg{position:absolute;inset:0;z-index:120;background:#000;cursor:pointer}
+#egg[hidden]{display:none}
+#egg img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 40%}
 /* Ruhebildschirm: Uhr, wechselnde Infokarte, Hinweis zum Berühren */
 #attract{position:absolute;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;padding:56px 60px 64px;background:var(--grad);color:#fff;cursor:pointer}
 #attract[hidden]{display:none}
@@ -301,6 +305,7 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
     </footer>
     <div class="mback" id="modal" hidden></div>
     <div class="toast" id="toast" hidden role="status"></div>
+    <div id="egg" hidden><img alt="" src="%%EGG%%"></div>
     <div id="attract" hidden aria-label="Ruhebildschirm">
       <img id="alogo" alt="Hochschule Coburg">
       <div class="aclk" id="aclk">--:--</div>
@@ -719,6 +724,7 @@ document.addEventListener('click',e=>{
       if(!S.modal.name.trim()) return;
       const c=S.modal.cups, nm=S.modal.name;
       S.modal=null; drawModal();
+      if(nm.trim().toLowerCase()==='paravoz'&&c===2) showEgg();
       addScore(nm,c).then(res=>{
         if(!res.ok){ toast(res.msg); return; }
         if(S.tab==='kaffee') drawPanel(false);
@@ -757,6 +763,13 @@ function fit(){
   st.style.transform=`translate(${(w-1080*s)/2}px,${(h-1920*s)/2}px) scale(${s})`;
 }
 addEventListener('resize',fit); fit();
+
+/* Easter Egg: Name "Paravoz" mit 2 Tassen zeigt 10 s lang ein Foto im Vollbild (Tippen schließt) */
+const EGG=document.getElementById('egg');
+let eggTimer;
+function showEgg(){ EGG.hidden=false; clearTimeout(eggTimer); eggTimer=setTimeout(hideEgg,10000); }
+function hideEgg(){ EGG.hidden=true; clearTimeout(eggTimer); }
+EGG.addEventListener('click',hideEgg);
 
 /* ===== Ruhebildschirm: nach 1 Minute ohne Berührung Uhr + wechselnde Infokarten (alle 20 s) ===== */
 const ATTRACT_IDLE=60000, ATTRACT_EVERY=20000;
