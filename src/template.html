@@ -203,9 +203,11 @@ footer{height:72px;flex:none;display:flex;align-items:center;justify-content:spa
 :focus-visible{outline:6px solid var(--orange);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){.anim{animation:none}.tab,.chip,.lang button{transition:none}}
 /* Events: QR-Code zum Speichern im Handy-Kalender, direkt neben dem Event */
-.qrm{position:relative;flex:none;align-self:center;width:140px}
-.qrm .qc{position:absolute;top:-16px;left:-16px;width:52px;height:52px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.25)}
-.qrm .qc svg{width:30px;height:30px}
+.qrm{position:relative;flex:none;align-self:center}
+.qrm .qs{display:block;padding:16px;background:#fff;border:3px solid var(--line);border-radius:18px;line-height:0}   /* 16px Rand = ruhige Zone um den Code; nichts darf hineinragen */
+.qrm .qs svg{display:block}
+.qrm .qc{position:absolute;right:-18px;bottom:-18px;width:36px;height:36px;border-radius:50%;background:var(--grad);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 8px rgba(0,0,0,.25)}   /* sitzt auf der Rahmenecke unten rechts, nicht über den Suchmustern */
+.qrm .qc svg{width:22px;height:22px}
 .qrm .qs{display:block;width:140px;height:140px;padding:8px;background:#fff;border:3px solid var(--line);border-radius:18px}
 .qrm .qs svg{display:block;width:100%;height:100%}
 /* Easter Egg: Foto im Vollbild */
@@ -776,7 +778,7 @@ addEventListener('resize',fit); fit();
 const icsEsc=s=>String(s).replace(/\\/g,'\\\\').replace(/;/g,'\\;').replace(/,/g,'\\,').replace(/\r?\n/g,'\\n');
 const icsDT=d=>d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'T'+p2(d.getHours())+p2(d.getMinutes())+'00';
 function eventIcs(e){
-  const day=parse(e.d), L=['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT','SUMMARY:'+icsEsc(e.t.slice(0,80))];   /* bewusst knapp: weniger Daten = größere, leichter lesbare QR-Module */
+  const day=parse(e.d), L=['BEGIN:VCALENDAR','VERSION:2.0','BEGIN:VEVENT','SUMMARY:'+icsEsc(e.t.slice(0,60))];   /* bewusst knapp: weniger Daten = größere, leichter lesbare QR-Module */
   if(e.time){
     const s=mins(e.time); let en=e.end?mins(e.end):s+60; if(en<=s) en=s+60;
     const at=m=>{const x=new Date(day);x.setMinutes(m);return x};
@@ -785,17 +787,18 @@ function eventIcs(e){
     const nx=new Date(day); nx.setDate(nx.getDate()+1);
     L.push('DTSTART;VALUE=DATE:'+icsDT(day).slice(0,8),'DTEND;VALUE=DATE:'+icsDT(nx).slice(0,8));
   }
-  if(e.o) L.push('LOCATION:'+icsEsc(e.o.slice(0,60)));
+  if(e.o) L.push('LOCATION:'+icsEsc(e.o.slice(0,40)));
   L.push('END:VEVENT','END:VCALENDAR');
   return L.join('\r\n');
 }
+const QR_CELL=4;   /* Pixel je QR-Modul (ganzzahlig, damit die Kanten scharf bleiben) */
 const qrCache={};
 function eventQr(e){   /* SVG-QR-Code mit dem Termin; Fehlerkorrektur L = weniger Module, auch aus einiger Entfernung lesbar */
   const ics=eventIcs(e);
   if(!qrCache[ics]){
     qrcode.stringToBytes=qrcode.stringToBytesFuncs['UTF-8'];
     const qr=qrcode(0,'L'); qr.addData(ics); qr.make();
-    qrCache[ics]=qr.createSvgTag({cellSize:4,margin:0,scalable:true});
+    qrCache[ics]=qr.createSvgTag({cellSize:QR_CELL,margin:0,scalable:false}).replace('<svg ','<svg shape-rendering="crispEdges" ');
   }
   return qrCache[ics];
 }
