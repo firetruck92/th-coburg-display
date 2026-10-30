@@ -297,7 +297,7 @@ def mensa_loop():
 
 # Listen, die über die Admin-Seite gepflegt werden: Events und Profs Kontakt
 STORES = {
-    'events': {'file': DATA / 'events.json', 'req': ('d', 't'), 'fields': ('d', 'time', 't', 'o', 'g')},
+    'events': {'file': DATA / 'events.json', 'req': ('d', 't'), 'fields': ('d', 'time', 'end', 't', 'o', 'g')},
     'profs': {'file': DATA / 'profs.json', 'req': ('n', 'f'), 'fields': ('n', 'f', 'r', 'h', 'm', 'p')},
 }
 STORE_LOCK = threading.Lock()
@@ -333,8 +333,11 @@ def store_save(kind, body):
             time.strptime(item['d'], '%Y-%m-%d')
         except ValueError:
             raise ValueError('Ungültiges Datum.')
-        if item['time'] and not re.fullmatch(r'\d{1,2}:\d{2}', item['time']):
-            raise ValueError('Ungültige Uhrzeit (Format HH:MM).')
+        for k in ('time', 'end'):
+            if item[k] and not re.fullmatch(r'\d{1,2}:\d{2}', item[k]):
+                raise ValueError('Ungültige Uhrzeit (Format HH:MM).')
+        if item['end'] and not item['time']:
+            raise ValueError('Ende ohne Beginn: bitte auch die Uhrzeit angeben.')
     with STORE_LOCK:
         items = store_load(kind)
         old = next((i for i in items if i['id'] == body.get('id')), None)

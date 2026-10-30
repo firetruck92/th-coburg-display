@@ -91,9 +91,9 @@ $('#menrefresh').onclick=async()=>{const b=$('#menrefresh');b.disabled=true;b.te
 /* Events und Profs: gleiche Oberfläche, nur andere Felder */
 const KINDS={
  events:{title:'Events',empty:'Noch keine Events.',
-  fields:[['d','Datum','date',1,'wide'],['time','Uhrzeit','time'],['g','Kategorie','text',0,'',['Studium','Sport','Karriere','Informatik','Vortrag','Kultur']],['t','Titel','text',1,'wide'],['o','Ort','text',0,'wide']],
-  line:e=>`<b>${d(e.d)}</b> ${eh(e.time||'')} · ${eh(e.t)}<small>${eh([e.o,e.g].filter(Boolean).join(' · '))}</small>`,
-  sort:(a,b)=>(a.d+a.time).localeCompare(b.d+b.time)},
+  fields:[['d','Datum','date',1],['time','Beginn','time'],['end','Ende (für den Kalender, optional)','time'],['g','Kategorie','text',0,'',['Studium','Sport','Karriere','Informatik','Vortrag','Kultur']],['t','Titel','text',1,'wide'],['o','Ort','text',0,'wide']],
+  line:e=>`<b>${d(e.d)}</b> ${eh(e.time||'')}${e.end?'–'+eh(e.end):''} · ${eh(e.t)}<small>${eh([e.o,e.g].filter(Boolean).join(' · '))}</small>`,
+  sort:(a,b)=>(a.d+(a.time||'')).localeCompare(b.d+(b.time||''))},
  profs:{title:'Profs Kontakt',empty:'Noch keine Einträge.',
   fields:[['n','Name','text',1,'wide'],['f','Fakultät','text',1,'',['Informatik','Wirtschaft','Design','Technik']],['r','Raum','text'],['h','Sprechstunde (z. B. Di 10:00–11:00)','text',0,'wide'],['m','E-Mail','email'],['p','Telefon','text']],
   line:p=>`<b>${eh(p.n)}</b> · ${eh(p.f)}<small>${eh([p.r,p.h,p.m,p.p].filter(Boolean).join(' · '))}</small>`,
